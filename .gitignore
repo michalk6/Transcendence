@@ -203,6 +203,12 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Frontend / Node
+node_modules/
+src/frontend/node_modules/
+src/frontend/dist/
+src/frontend/.vite/
+
 # Ruff stuff:
 .ruff_cache/
 
