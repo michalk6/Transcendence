@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import './GameMainMenu.css'
 
 export default function GameMainMenu({ onViewChange }) {
   const [displayedStatus, setDisplayedStatus] = useState('Oczekiwanie na gracza...')
@@ -11,18 +10,24 @@ export default function GameMainMenu({ onViewChange }) {
     }
   }
 
-  return (
-    <div className="game-main-menu">
-      <h1 className="game-main-menu__title">TRANSCENDENCE</h1>
-      <p className="game-main-menu__subtitle">Transcendence</p>
+  const wrapperClass = "min-h-screen flex flex-col items-center justify-center gap-6 bg-[#0a0a16] text-[#00ffcc] px-6 py-10"
+  const titleClass = "text-3xl uppercase text-[#ff0055]"
+  const subtitleClass = "text-base text-[#00ffcc]"
+  const buttonClass = "rounded border-2 border-[#00ffcc] px-6 py-3 text-lg uppercase text-[#00ffcc] transition hover:bg-[#00ffcc] hover:text-[#0a0a16]"
+  const statusClass = "text-sm text-[#ffff00]"
 
-      <div className="game-main-menu__menu-box">
-        <button className="game-main-menu__button" onClick={handleStartGame}>
+  return (
+    <div className={wrapperClass}>
+      <h1 className={titleClass}>TRANSCENDENCE</h1>
+      <p className={subtitleClass}>Transcendence</p>
+
+      <div className="flex w-full max-w-xs justify-center">
+        <button className={buttonClass} onClick={handleStartGame}>
           Graj
         </button>
       </div>
 
-      <div className="game-main-menu__status">
+      <div className={statusClass}>
         STATUS: {displayedStatus}
       </div>
     </div>
