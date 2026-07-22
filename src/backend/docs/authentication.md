@@ -124,6 +124,32 @@ Body:
 }
 ```
 
+The `username` field accepts either:
+- the user's username
+- the user's email address
+
+Email addresses are matched case-insensitively.
+
+Examples:
+
+Login using username:
+
+```json
+{
+    "username": "john",
+    "password": "strong_password123"
+}
+```
+
+Login using email:
+
+```json
+{
+    "username": "john@example.com",
+    "password": "strong_password123"
+}
+```
+
 ## Response
 
 Status:
