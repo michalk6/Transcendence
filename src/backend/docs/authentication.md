@@ -57,17 +57,19 @@ Body:
 {
     "username": "john",
     "email": "john@example.com",
-    "password": "strong_password123"
+    "password": "strong_password123",
+    "repeat_password": "strong_password123"
 }
 ```
 
 ## Fields
 
-| Field    | Type   | Required | Description        |
-| -------- | ------ | -------- | ------------------ |
-| username | string | yes      | Unique username    |
-| email    | string | yes      | User email address |
-| password | string | yes      | User password      |
+| Field             | Type   | Required | Description                                   |
+| ----------------- | ------ | -------- | --------------------------------------------- |
+| `username`        | string | yes      | Unique username                               |
+| `email`           | string | yes      | User email address                            |
+| `password`        | string | yes      | User password                                 |
+| `repeat_password` | string | yes      | Password confirmation (must match `password`) |
 
 ## Response
 
@@ -93,6 +95,7 @@ Body:
 
 ## Notes
 
+Both `password` and `repeat_password` fields are write-only and will not be returned in the response payload.  
 After successful registration, the user is already authenticated and can use the returned access token.
 
 ---
