@@ -19,15 +19,14 @@ Protected endpoints require an access token.
 
 The token must be sent in the `Authorization` header:
 
-```
+```http
 Authorization: Bearer <access_token>
 ```
 
 Example:
 
-```
+```http
 GET /api/users/me/
-
 Authorization: Bearer eyJhbGciOiJIUzI1Ni...
 ```
 
@@ -39,7 +38,7 @@ Creates a new user account and automatically authenticates the user.
 
 ## Endpoint
 
-```
+```http
 POST /api/auth/register/
 ```
 
@@ -47,8 +46,8 @@ POST /api/auth/register/
 
 Content-Type:
 
-```
-application/json
+```http
+Content-Type: application/json
 ```
 
 Body:
@@ -75,7 +74,7 @@ Body:
 
 Status:
 
-```
+```http
 201 Created
 ```
 
@@ -106,7 +105,7 @@ Authenticates an existing user.
 
 ## Endpoint
 
-```
+```http
 POST /api/auth/login/
 ```
 
@@ -114,8 +113,8 @@ POST /api/auth/login/
 
 Content-Type:
 
-```
-application/json
+```http
+Content-Type: application/json
 ```
 
 Body:
@@ -131,7 +130,7 @@ The `username` field accepts either:
 - the user's username
 - the user's email address
 
-Email addresses are matched case-insensitively.
+Email addresses are matched case-sensitively.
 
 Examples:
 
@@ -157,7 +156,7 @@ Login using email:
 
 Status:
 
-```
+```http
 200 OK
 ```
 
@@ -178,7 +177,7 @@ Generates a new access token using a valid refresh token.
 
 ## Endpoint
 
-```
+```http
 POST /api/auth/refresh/
 ```
 
@@ -196,7 +195,7 @@ Body:
 
 Status:
 
-```
+```http
 200 OK
 ```
 
@@ -217,7 +216,7 @@ Checks whether a token is valid.
 
 ## Endpoint
 
-```
+```http
 POST /api/auth/verify/
 ```
 
@@ -235,17 +234,13 @@ Body:
 
 Valid token:
 
-Status:
-
-```
+```http
 200 OK
 ```
 
 Invalid token:
 
-Status:
-
-```
+```http
 401 Unauthorized
 ```
 
@@ -257,7 +252,7 @@ Invalidates the refresh token.
 
 ## Endpoint
 
-```
+```http
 POST /api/auth/logout/
 ```
 
@@ -275,7 +270,7 @@ Body:
 
 Status:
 
-```
+```http
 200 OK
 ```
 
@@ -302,7 +297,7 @@ Old refresh tokens are blacklisted after rotation.
 
 Status:
 
-```
+```http
 400 Bad Request
 ```
 
@@ -322,7 +317,7 @@ Example:
 
 Status:
 
-```
+```http
 401 Unauthorized
 ```
 
@@ -340,7 +335,7 @@ Example:
 
 Status:
 
-```
+```http
 401 Unauthorized
 ```
 
