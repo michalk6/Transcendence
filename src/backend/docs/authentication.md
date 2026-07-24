@@ -204,7 +204,8 @@ Body:
 
 ```json
 {
-    "access": "eyJhbGciOiJIUzI1Ni..."
+    "access": "eyJhbGciOiJIUzI1Ni...",
+    "refresh": "eyJhbGciOiJIUzI1Ni..."
 }
 ```
 
