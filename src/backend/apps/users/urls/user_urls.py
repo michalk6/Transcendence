@@ -3,5 +3,6 @@ from apps.users.views import user_views
 
 
 urlpatterns = [
-    path("me/", user_views.MeView.as_view())
+    path("me/", user_views.CurrentUserView.as_view()),
+    path("me/password/", user_views.PasswordChangeView.as_view()),
 ]

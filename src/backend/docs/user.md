@@ -1,6 +1,6 @@
 # User API
 
-## Get Current User
+# Get Current User
 
 Returns information about the currently authenticated user.
 
@@ -265,3 +265,188 @@ This endpoint performs a partial update (`PATCH`).
 Only the fields included in the request body are modified. All omitted fields remain unchanged.
 
 The user is identified automatically from the JWT access token.
+
+---
+
+# Change Current User Password
+
+Changes the password of the currently authenticated user.
+
+The user must provide the current password and a new password.
+
+The new password must pass Django password validation rules.
+
+---
+
+## Endpoint
+
+```http
+PATCH /api/users/me/password/
+```
+
+## Authentication
+
+This endpoint requires a valid access token.
+
+Header:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Example:
+
+```http
+PATCH /api/users/me/password/
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+```
+
+---
+
+## Request
+
+The request body must contain the following fields:
+
+| Field              | Type   | Required | Description                      |
+|--------------------|--------|----------|----------------------------------|
+| `current_password` | string | Yes      | Current user password            |
+| `new_password`     | string | Yes      | New password                     |
+| `repeat_password`  | string | Yes      | Confirmation of new password     |
+
+Example:
+
+```json
+{
+    "current_password": "OldPassword123!",
+    "new_password": "NewPassword123!",
+    "repeat_password": "NewPassword123!"
+}
+```
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "message": "Password changed successfully"
+}
+```
+
+---
+
+## Errors
+
+### Missing Authentication
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Authentication credentials were not provided."
+}
+```
+
+---
+
+### Invalid or Expired Token
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Given token not valid for any token type",
+    "code": "token_not_valid"
+}
+```
+
+---
+
+### Incorrect Current Password
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "current_password": [
+        "Current password is incorrect."
+    ]
+}
+```
+
+---
+
+### Password Confirmation Does Not Match
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "password": "password field didn't match"
+}
+```
+
+---
+
+### New Password Validation Error
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "new_password": [
+        "This password is too short. It must contain at least 8 characters.",
+        "This password is too common."
+    ]
+}
+```
+
+Validation rules are provided by Django's configured password validators.
+
+---
+
+## Notes
+
+The endpoint does not require or accept a user ID.
+
+The user is identified automatically from the JWT access token.
+
+After a successful password change, the user remains authenticated with the current JWT token.
