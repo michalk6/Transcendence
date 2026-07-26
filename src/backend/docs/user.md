@@ -1,5 +1,20 @@
 # User API
 
+## Overview
+
+This document describes user management endpoints provided by the backend.
+
+These endpoints allow authenticated users to:
+- retrieve their own profile information
+- update their profile data
+- change their password
+
+All user endpoints operate on the currently authenticated user identified by the JWT access token.
+
+The API does not require sending a user ID in requests. The backend determines the user automatically from the provided access token.
+
+---
+
 # Get Current User
 
 Returns information about the currently authenticated user.
@@ -264,6 +279,8 @@ This endpoint performs a partial update (`PATCH`).
 
 Only the fields included in the request body are modified. All omitted fields remain unchanged.
 
+The `id` field is read-only and cannot be modified.
+
 The user is identified automatically from the JWT access token.
 
 ---
@@ -337,7 +354,9 @@ Body:
 
 ```json
 {
-    "message": "Password changed successfully"
+    "message": "Password changed successfully",
+    "refresh": "eyJhbGciOiJIUzI1Ni...",
+    "access": "eyJhbGciOiJIUzI1Ni..."
 }
 ```
 
@@ -414,7 +433,9 @@ Example:
 
 ```json
 {
-    "password": "password field didn't match"
+    "password": [
+        "password field didn't match"
+    ]
 }
 ```
 
@@ -449,4 +470,8 @@ The endpoint does not require or accept a user ID.
 
 The user is identified automatically from the JWT access token.
 
-After a successful password change, the user remains authenticated with the current JWT token.
+After changing the password, the user receives a new access and refresh token pair for the current session.
+
+All previously issued refresh tokens are invalidated.
+
+Previously issued access tokens remain valid until expiration.
