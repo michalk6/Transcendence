@@ -14,4 +14,5 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('logout-all/', auth_views.LogoutAllView.as_view(), name='logout_all_sessions'),
 ]
