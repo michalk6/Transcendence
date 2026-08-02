@@ -475,3 +475,113 @@ After changing the password, the user receives a new access and refresh token pa
 All previously issued refresh tokens are invalidated.
 
 Previously issued access tokens remain valid until expiration.
+
+# Get Public User Profile
+
+Returns public information about a user.
+
+This endpoint allows retrieving a user's public profile by username.
+
+The endpoint does not require authentication.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/profile/<username>/
+```
+
+Example:
+
+```http
+GET /api/users/profile/john/
+```
+
+---
+
+## Authentication
+
+This endpoint is public and does not require an access token.
+
+No `Authorization` header is required.
+
+---
+
+## Request
+
+No request body is required.
+
+The username is provided as a URL parameter.
+
+---
+
+## URL Parameters
+
+| Parameter  | Type   | Required | Description                    |
+| ---------- | ------ | -------- | ------------------------------ |
+| `username` | string | Yes      | Username of the requested user |
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "id": 1,
+    "username": "john",
+    "first_name": "John",
+    "last_name": "Smith"
+}
+```
+
+---
+
+## Response Fields
+
+| Field        | Type    | Description            |
+| ------------ | ------- | ---------------------- |
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | User's username        |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Errors
+
+### User Not Found
+
+Status:
+
+```http
+404 Not Found
+```
+
+Example:
+
+```json
+{
+    "detail": "No User matches the given query."
+}
+```
+
+---
+
+## Notes
+
+This endpoint returns only public user information.
+
+Private data such as email address and authentication-related information are not included in the response.
+
+The user is identified by the `username` parameter provided in the URL.
+
+The endpoint is intended for displaying public user profiles.

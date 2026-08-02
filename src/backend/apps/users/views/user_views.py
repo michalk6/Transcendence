@@ -1,17 +1,30 @@
+from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from apps.users.serializers.user_serializers import (
-    UserSerializer,
+    PrivateUserSerializer,
     PasswordChangeSerializer,
+    PublicUserSerializer,
 )
 from apps.users.services.token_services import reset_refresh_tokens
 
 
+User = get_user_model()
+
+
 class CurrentUserView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = PrivateUserSerializer
 
     def get_object(self):
         return self.request.user
+
+
+class PublicUserView(generics.RetrieveAPIView):
+    serializer_class = PublicUserSerializer
+    permission_classes = [AllowAny]
+    queryset = User.objects.all()
+    lookup_field = "username"
 
 
 class PasswordChangeView(generics.GenericAPIView):
