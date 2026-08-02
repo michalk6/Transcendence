@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -25,6 +26,23 @@ class PublicUserView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     queryset = User.objects.all()
     lookup_field = "username"
+
+
+class SearchUserView(generics.ListAPIView):
+    serializer_class = PublicUserSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+        q = self.request.query_params.get("q")
+        if not q:
+            return User.objects.none()
+        queryset = queryset.filter(
+            Q(username__icontains=q)
+            | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+        )
+        return queryset
 
 
 class PasswordChangeView(generics.GenericAPIView):

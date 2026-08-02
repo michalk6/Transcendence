@@ -585,3 +585,168 @@ Private data such as email address and authentication-related information are no
 The user is identified by the `username` parameter provided in the URL.
 
 The endpoint is intended for displaying public user profiles.
+
+# Search Users
+
+Searches for users by username, first name, or last name.
+
+The search is case-insensitive and matches partial text fragments.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/search/
+```
+
+---
+
+## Authentication
+
+This endpoint does not require authentication.
+
+No `Authorization` header is required.
+
+---
+
+## Request
+
+The search query is provided using the `q` query parameter.
+
+Example:
+
+```http
+GET /api/users/search/?q=john
+```
+
+---
+
+## Query Parameters
+
+| Parameter | Type   | Required | Description                        |
+| --------- | ------ | -------- | ---------------------------------- |
+| `q`       | string | Yes      | Text fragment used to search users |
+
+---
+
+## Search Behavior
+
+The search is performed using case-insensitive partial matching.
+
+The following user fields are searched:
+
+* `username`
+* `first_name`
+* `last_name`
+
+Example:
+
+Request:
+
+```http
+GET /api/users/search/?q=joh
+```
+
+Possible matches:
+
+```json
+[
+    {
+        "id": 1,
+        "username": "john",
+        "first_name": "John",
+        "last_name": "Smith"
+    },
+    {
+        "id": 2,
+        "username": "johanna",
+        "first_name": "Johanna",
+        "last_name": "Brown"
+    }
+]
+```
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+[
+    {
+        "id": 1,
+        "username": "john",
+        "first_name": "John",
+        "last_name": "Smith"
+    }
+]
+```
+
+---
+
+## Response Fields
+
+| Field        | Type    | Description            |
+| ------------ | ------- | ---------------------- |
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | Username               |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Empty Results
+
+If no users match the provided query, an empty list is returned.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+[]
+```
+
+---
+
+## Missing Query Parameter
+
+If the `q` parameter is not provided, the endpoint returns an empty list.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+[]
+```
+
+---
+
+## Notes
+
+This endpoint returns only public user information.
+
+Private user data, such as email address or authentication-related fields, is not exposed.
+
+For detailed information about a single user, use the public profile endpoint:
+
+```http
+GET /api/users/profile/<username>/
+```
