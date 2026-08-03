@@ -4,14 +4,15 @@
 
 This document describes user management endpoints provided by the backend.
 
-These endpoints allow authenticated users to:
-- retrieve their own profile information
-- update their profile data
+These endpoints allow users to:
+- retrieve and update their own profile information
 - change their password
+- retrieve public user profiles
+- search for users
 
-All user endpoints operate on the currently authenticated user identified by the JWT access token.
+Some endpoints require authentication, while public endpoints can be accessed without authentication.
 
-The API does not require sending a user ID in requests. The backend determines the user automatically from the provided access token.
+For authenticated user endpoints, the backend identifies the user automatically from the provided access token.
 
 ---
 
@@ -476,6 +477,219 @@ All previously issued refresh tokens are invalidated.
 
 Previously issued access tokens remain valid until expiration.
 
+# Search Users
+
+Searches for users by username, first name, or last name.
+
+The search is case-insensitive and matches partial text fragments.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/search/
+```
+
+---
+
+## Authentication
+
+This endpoint does not require authentication.
+
+No `Authorization` header is required.
+
+---
+
+## Request
+
+The search query is provided using the `q` query parameter.
+
+Example:
+
+```http
+GET /api/users/search/?q=john
+```
+
+---
+
+## Query Parameters
+
+| Parameter   | Type    | Required | Description                        |
+| ----------- | ------- | -------- | ---------------------------------- |
+| `q`         | string  | Yes      | Text fragment used to search users |
+| `page`      | integer | No       | Page number                        |
+| `page_size` | integer | No       | Number of results per page         |
+
+---
+
+## Search Behavior
+
+The search is performed using case-insensitive partial matching.
+
+The following user fields are searched:
+
+* `username`
+* `first_name`
+* `last_name`
+
+Example:
+
+Request:
+
+```http
+GET /api/users/search/?q=joh
+```
+
+The query above may return users containing the `joh` fragment in any searchable field.
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "count": 25,
+    "next": "http://api.example.com/api/users/search/?q=john&page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "username": "john",
+            "first_name": "John",
+            "last_name": "Smith"
+        },
+        {
+            "id": 2,
+            "username": "johanna",
+            "first_name": "Johanna",
+            "last_name": "Brown"
+        },
+        ...
+    ]
+}
+```
+
+The response example contains only a subset of returned users.
+
+---
+
+## Response Fields
+
+| Field      | Type    | Description                                                      |
+| ---------- | ------- | ---------------------------------------------------------------- |
+| `count`    | integer | Total number of matching users                                   |
+| `next`     | string  | URL of the next page, or `null` if there is no next page         |
+| `previous` | string  | URL of the previous page, or `null` if there is no previous page |
+| `results`  | array   | List of matching users                                           |
+
+---
+
+## User Object Fields
+
+Each user object contains:
+
+| Field        | Type    | Description            |
+| ------------ | ------- | ---------------------- |
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | Username               |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Pagination
+
+Results are paginated.
+
+Default page size:
+
+```text
+50 users per page
+```
+
+Maximum page size:
+
+```text
+100 users per page
+```
+
+The number of returned results can be changed using the `page_size` query parameter.
+
+Example:
+
+```http
+GET /api/users/search/?q=john&page=2&page_size=10
+```
+
+---
+
+## Empty Results
+
+If no users match the provided query, an empty result list is returned.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+{
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+}
+```
+
+---
+
+## Missing Query Parameter
+
+If the `q` parameter is not provided, the endpoint returns an empty result list.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+{
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+}
+```
+
+---
+
+## Notes
+
+This endpoint returns only public user information.
+
+Private user data, such as email address or authentication-related fields, is not exposed.
+
+For detailed information about a single user, use the public profile endpoint:
+
+```http
+GET /api/users/profile/<username>/
+```
+
 # Get Public User Profile
 
 Returns public information about a user.
@@ -585,168 +799,3 @@ Private data such as email address and authentication-related information are no
 The user is identified by the `username` parameter provided in the URL.
 
 The endpoint is intended for displaying public user profiles.
-
-# Search Users
-
-Searches for users by username, first name, or last name.
-
-The search is case-insensitive and matches partial text fragments.
-
----
-
-## Endpoint
-
-```http
-GET /api/users/search/
-```
-
----
-
-## Authentication
-
-This endpoint does not require authentication.
-
-No `Authorization` header is required.
-
----
-
-## Request
-
-The search query is provided using the `q` query parameter.
-
-Example:
-
-```http
-GET /api/users/search/?q=john
-```
-
----
-
-## Query Parameters
-
-| Parameter | Type   | Required | Description                        |
-| --------- | ------ | -------- | ---------------------------------- |
-| `q`       | string | Yes      | Text fragment used to search users |
-
----
-
-## Search Behavior
-
-The search is performed using case-insensitive partial matching.
-
-The following user fields are searched:
-
-* `username`
-* `first_name`
-* `last_name`
-
-Example:
-
-Request:
-
-```http
-GET /api/users/search/?q=joh
-```
-
-Possible matches:
-
-```json
-[
-    {
-        "id": 1,
-        "username": "john",
-        "first_name": "John",
-        "last_name": "Smith"
-    },
-    {
-        "id": 2,
-        "username": "johanna",
-        "first_name": "Johanna",
-        "last_name": "Brown"
-    }
-]
-```
-
----
-
-## Response
-
-Status:
-
-```http
-200 OK
-```
-
-Body:
-
-```json
-[
-    {
-        "id": 1,
-        "username": "john",
-        "first_name": "John",
-        "last_name": "Smith"
-    }
-]
-```
-
----
-
-## Response Fields
-
-| Field        | Type    | Description            |
-| ------------ | ------- | ---------------------- |
-| `id`         | integer | Unique user identifier |
-| `username`   | string  | Username               |
-| `first_name` | string  | User's first name      |
-| `last_name`  | string  | User's last name       |
-
----
-
-## Empty Results
-
-If no users match the provided query, an empty list is returned.
-
-Status:
-
-```http
-200 OK
-```
-
-Example:
-
-```json
-[]
-```
-
----
-
-## Missing Query Parameter
-
-If the `q` parameter is not provided, the endpoint returns an empty list.
-
-Status:
-
-```http
-200 OK
-```
-
-Example:
-
-```json
-[]
-```
-
----
-
-## Notes
-
-This endpoint returns only public user information.
-
-Private user data, such as email address or authentication-related fields, is not exposed.
-
-For detailed information about a single user, use the public profile endpoint:
-
-```http
-GET /api/users/profile/<username>/
-```

@@ -9,6 +9,7 @@ from apps.users.serializers.user_serializers import (
     PublicUserSerializer,
 )
 from apps.users.services.token_services import reset_refresh_tokens
+from apps.users.pagination import UserListPagination
 
 
 User = get_user_model()
@@ -31,6 +32,7 @@ class PublicUserView(generics.RetrieveAPIView):
 class SearchUserView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
     permission_classes = [AllowAny]
+    pagination_class = UserListPagination
 
     def get_queryset(self):
         queryset = User.objects.all()
