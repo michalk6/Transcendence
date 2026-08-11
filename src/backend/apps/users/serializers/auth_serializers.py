@@ -1,10 +1,13 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from typing import TYPE_CHECKING
 
 
-User = get_user_model()
-
+if TYPE_CHECKING:
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
     repeat_password = serializers.CharField(
@@ -28,7 +31,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data) -> User:
-        new_user = User.objects.create_user(  # type: ignore
+        new_user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
