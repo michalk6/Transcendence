@@ -11,6 +11,24 @@ from apps.relations.services import accept_request
 User = get_user_model()
 
 
+class ReceivedFriendRequestListView(generics.ListAPIView):
+    serializer_class = FriendRequestSerializer
+
+    def get_queryset(self):
+        return FriendRequest.objects.filter(
+            receiver=self.request.user,
+        )
+
+
+class SentFriendRequestListView(generics.ListAPIView):
+    serializer_class = FriendRequestSerializer
+
+    def get_queryset(self):
+        return FriendRequest.objects.filter(
+            sender=self.request.user,
+        )
+
+
 class SendFriendRequestView(generics.GenericAPIView):
     serializer_class = FriendRequestSendSerializer
 
