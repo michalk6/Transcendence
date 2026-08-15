@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 else:
     User = get_user_model()
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     repeat_password = serializers.CharField(
         style={'input_type': 'password'}, write_only=True, required=True
