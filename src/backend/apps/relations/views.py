@@ -51,14 +51,14 @@ class SendFriendRequestView(generics.GenericAPIView):
             accept_request(reverse_request)
             return Response(
                 {"message": "Friend added"},
-                status.HTTP_200_OK,
+                status=status.HTTP_200_OK,
             )
 
         friend_request.save()
 
         return Response(
             {"message": "Friend request sent successfully"},
-            status.HTTP_201_CREATED,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -74,7 +74,7 @@ class AcceptFriendRequestView(generics.GenericAPIView):
         accept_request(friend_request)
         return Response(
             {"message": "Friend request accepted"},
-            status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
         )
 
 
@@ -90,7 +90,30 @@ class RejectFriendRequestView(generics.GenericAPIView):
         friend_request.delete()
         return Response(
             {"message": "Friend request rejected"},
-            status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
+        )
+
+
+class DeleteFriendRequestView(generics.DestroyAPIView):
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return FriendRequest.objects.filter(
+            sender=user,
+        )
+
+
+class RemoveFriendView(generics.GenericAPIView):
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return user.friends.all()
+
+    def post(self, request, *args, **kwargs):
+        user = cast(User, request.user)
+        to_remove: User = self.get_object()
+        user.remove_friend(to_remove)
+        return Response(
+            {"message": f"User {to_remove} removed from your friend list"},
+            status=status.HTTP_200_OK,
         )
 
 
