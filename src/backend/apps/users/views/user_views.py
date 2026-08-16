@@ -11,7 +11,7 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 
 if TYPE_CHECKING:
@@ -61,6 +61,15 @@ class FriendListView(generics.ListAPIView):
         username = self.kwargs["username"]
         user: User = get_object_or_404(User, username=username)
         return user.friends.all()
+
+
+class BlocklistListView(generics.ListAPIView):
+    serializer_class = PublicUserSerializer
+    pagination_class = UserListPagination
+
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return user.blocklist.all()
 
 
 class PasswordChangeView(generics.GenericAPIView):

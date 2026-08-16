@@ -1,14 +1,19 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, BadRequest
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from typing import cast
 from apps.relations.serializers import FriendRequestSendSerializer, FriendRequestSerializer
 from apps.relations.models import FriendRequest
 from apps.relations.services import accept_request
+from typing import TYPE_CHECKING
 
 
-User = get_user_model()
+if TYPE_CHECKING:
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 
 class ReceivedFriendRequestListView(generics.ListAPIView):
@@ -86,4 +91,41 @@ class RejectFriendRequestView(generics.GenericAPIView):
         return Response(
             {"message": "Friend request rejected"},
             status.HTTP_200_OK,
+        )
+
+
+class BlockUserView(generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        user: User = request.user
+        to_block: User = get_object_or_404(User, pk=self.kwargs["pk"])
+
+        if user == to_block:
+            raise BadRequest()
+
+        if user.is_friend(to_block):
+            return Response(
+                {
+                    "detail":
+                    f"User {to_block} is your friend. "
+                    "Remove them from friend list first",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user.block_user(to_block)
+        return Response(
+            {"message": f"User {to_block} blocked"},
+            status=status.HTTP_200_OK,
+        )
+
+
+class UnblockUserView(generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        user: User = request.user
+        to_unblock = get_object_or_404(User, pk=self.kwargs["pk"])
+
+        user.unblock_user(to_unblock)
+        return Response(
+            {"message": f"User {to_unblock} unblocked"},
+            status=status.HTTP_200_OK,
         )
