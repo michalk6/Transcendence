@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -10,9 +11,13 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
+from typing import TYPE_CHECKING
 
 
-User = get_user_model()
+if TYPE_CHECKING:
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
@@ -45,6 +50,17 @@ class SearchUserView(generics.ListAPIView):
             | Q(last_name__icontains=q)
         )
         return queryset
+
+
+class FriendListView(generics.ListAPIView):
+    serializer_class = PublicUserSerializer
+    permission_classes = [AllowAny]
+    pagination_class = UserListPagination
+
+    def get_queryset(self):
+        username = self.kwargs["username"]
+        user: User = get_object_or_404(User, username=username)
+        return user.friends.all()
 
 
 class PasswordChangeView(generics.GenericAPIView):
