@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
+from apps.users.enums import FriendshipStatus
 
 
 User = get_user_model()
@@ -20,6 +21,9 @@ class PrivateUserSerializer(serializers.ModelSerializer):
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
+    friendship_status = serializers.CharField(
+        default=FriendshipStatus.NOT_APPLICABLE
+    )
 
     class Meta:
         model = User
@@ -28,6 +32,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "friendship_status",
         ]
 
 

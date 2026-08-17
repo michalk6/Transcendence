@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
@@ -11,6 +12,7 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
+from apps.users.queries import annotate_friendship_status
 from typing import TYPE_CHECKING, cast
 
 
@@ -33,6 +35,13 @@ class PublicUserView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     lookup_field = "username"
 
+    def get_queryset(self):
+        user = cast(User | AnonymousUser, self.request.user)
+        return annotate_friendship_status(
+            super().get_queryset(),
+            user,
+        )
+
 
 class SearchUserView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
@@ -49,6 +58,8 @@ class SearchUserView(generics.ListAPIView):
             | Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
         )
+        user = cast(User | AnonymousUser, self.request.user)
+        queryset = annotate_friendship_status(queryset, user)
         return queryset
 
 
@@ -59,8 +70,12 @@ class FriendListView(generics.ListAPIView):
 
     def get_queryset(self):
         username = self.kwargs["username"]
-        user: User = get_object_or_404(User, username=username)
-        return user.friends.all()
+        inspected_user: User = get_object_or_404(User, username=username)
+        user = cast(User | AnonymousUser, self.request.user)
+        return annotate_friendship_status(
+            inspected_user.friends.all(),
+            user,
+        )
 
 
 class BlocklistListView(generics.ListAPIView):
