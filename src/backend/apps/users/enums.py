@@ -7,4 +7,3 @@ class FriendshipStatus(StrEnum):
     REQUEST_RECEIVED = "request_received"
     NONE = "none"
     SELF = "self"
-    NOT_APPLICABLE = "not_applicable"

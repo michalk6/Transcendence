@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import QuerySet, Case, When, Exists, Value, OuterRef, Q
+from django.db.models import QuerySet, Case, When, Exists, Value, OuterRef, Q, Count
 from apps.users.models import User
 from apps.users.enums import FriendshipStatus
 from apps.relations.models import FriendRequest
@@ -34,4 +34,25 @@ def annotate_friendship_status(
             )
         )
 
+    return queryset
+
+
+def annotate_mutual_friend_count(
+        queryset: QuerySet[User],
+        user: User | AnonymousUser,
+) -> QuerySet[User]:
+    if user.is_authenticated:
+        user = cast(User, user)
+        queryset = queryset.annotate(
+            mutual_friends=Case(
+                When(
+                    condition=Q(pk=user.pk),
+                    then=Value(None),
+                ),
+                default=Count(
+                    "friends",
+                    filter=Q(friends__in=user.friends.all()),
+                ),
+            ),
+        )
     return queryset

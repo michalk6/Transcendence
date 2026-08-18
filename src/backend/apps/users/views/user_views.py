@@ -12,7 +12,7 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
-from apps.users.queries import annotate_friendship_status
+from apps.users.queries import annotate_friendship_status, annotate_mutual_friend_count
 from typing import TYPE_CHECKING, cast
 
 
@@ -37,10 +37,10 @@ class PublicUserView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         user = cast(User | AnonymousUser, self.request.user)
-        return annotate_friendship_status(
-            super().get_queryset(),
-            user,
-        )
+        queryset = super().get_queryset()
+        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
+        return queryset
 
 
 class SearchUserView(generics.ListAPIView):
@@ -60,6 +60,7 @@ class SearchUserView(generics.ListAPIView):
         )
         user = cast(User | AnonymousUser, self.request.user)
         queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
         return queryset
 
 
@@ -72,10 +73,10 @@ class FriendListView(generics.ListAPIView):
         username = self.kwargs["username"]
         inspected_user: User = get_object_or_404(User, username=username)
         user = cast(User | AnonymousUser, self.request.user)
-        return annotate_friendship_status(
-            inspected_user.friends.all(),
-            user,
-        )
+        queryset = inspected_user.friends.all()
+        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
+        return queryset
 
 
 class BlocklistListView(generics.ListAPIView):
