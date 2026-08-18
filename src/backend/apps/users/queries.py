@@ -56,3 +56,25 @@ def annotate_mutual_friend_count(
             ),
         )
     return queryset
+
+
+def filter_mutual_friends(
+        queryset: QuerySet[User],
+        user: User | AnonymousUser,
+) -> QuerySet[User]:
+    user = cast(User, user)
+    queryset = queryset.filter(
+        pk__in=user.friends.all(),
+    )
+    return queryset
+
+
+def filter_not_mutual_friends(
+        queryset: QuerySet[User],
+        user: User | AnonymousUser,
+) -> QuerySet[User]:
+    user = cast(User, user)
+    queryset = queryset.exclude(pk=user.pk).exclude(
+        pk__in=user.friends.all(),
+    )
+    return queryset

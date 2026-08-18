@@ -12,7 +12,12 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
-from apps.users.queries import annotate_friendship_status, annotate_mutual_friend_count
+from apps.users.queries import (
+    annotate_friendship_status,
+    annotate_mutual_friend_count,
+    filter_mutual_friends,
+    filter_not_mutual_friends,
+)
 from typing import TYPE_CHECKING, cast
 
 
@@ -76,6 +81,11 @@ class FriendListView(generics.ListAPIView):
         queryset = inspected_user.friends.all()
         queryset = annotate_friendship_status(queryset, user)
         queryset = annotate_mutual_friend_count(queryset, user)
+        mutuality = self.request.query_params.get("mutuality")
+        if mutuality == "mutual":
+            queryset = filter_mutual_friends(queryset, user)
+        elif mutuality == "not_mutual":
+            queryset = filter_not_mutual_friends(queryset, user)
         return queryset
 
 
