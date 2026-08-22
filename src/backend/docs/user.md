@@ -1,0 +1,801 @@
+# User API
+
+## Overview
+
+This document describes user management endpoints provided by the backend.
+
+These endpoints allow users to:
+- retrieve and update their own profile information
+- change their password
+- retrieve public user profiles
+- search for users
+
+Some endpoints require authentication, while public endpoints can be accessed without authentication.
+
+For authenticated user endpoints, the backend identifies the user automatically from the provided access token.
+
+---
+
+# Get Current User
+
+Returns information about the currently authenticated user.
+
+This endpoint uses the user identified by the JWT access token.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/me/
+```
+
+## Authentication
+
+This endpoint requires a valid access token.
+
+Header:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Example:
+
+```http
+GET /api/users/me/
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+```
+
+---
+
+## Request
+
+No request body is required.
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "id": 1,
+    "username": "john",
+    "email": "john@example.com",
+    "first_name": "John",
+    "last_name": "Smith"
+}
+```
+
+---
+
+## Response Fields
+
+| Field        | Type    | Description            |
+|--------------|---------|------------------------|
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | User's username        |
+| `email`      | string  | User's email address   |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Errors
+
+### Missing Authentication
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Authentication credentials were not provided."
+}
+```
+
+---
+
+### Invalid or Expired Token
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Given token not valid for any token type",
+    "code": "token_not_valid"
+}
+```
+
+---
+
+## Notes
+
+The user returned by this endpoint is determined from the JWT access token.
+
+The frontend should not send a user ID or username in the request. The backend identifies the user automatically based on the provided access token.
+
+---
+
+# Update Current User
+
+Updates the profile of the currently authenticated user.
+
+Only the fields provided in the request body are updated.
+
+---
+
+## Endpoint
+
+```http
+PATCH /api/users/me/
+```
+
+## Authentication
+
+This endpoint requires a valid access token.
+
+Header:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Example:
+
+```http
+PATCH /api/users/me/
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+```
+
+---
+
+## Request
+
+Request body may contain one or more of the following fields:
+
+| Field        | Type   | Required | Description              |
+|--------------|--------|----------|--------------------------|
+| `username`   | string | No       | New username             |
+| `email`      | string | No       | New email address        |
+| `first_name` | string | No       | New first name           |
+| `last_name`  | string | No       | New last name            |
+
+Example:
+
+```json
+{
+    "first_name": "John",
+    "last_name": "Smith"
+}
+```
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "id": 1,
+    "username": "john",
+    "email": "john@example.com",
+    "first_name": "John",
+    "last_name": "Smith"
+}
+```
+
+---
+
+## Errors
+
+### Missing Authentication
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Authentication credentials were not provided."
+}
+```
+
+---
+
+### Invalid or Expired Token
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Given token not valid for any token type",
+    "code": "token_not_valid"
+}
+```
+
+---
+
+### Validation Error
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "email": [
+        "Enter a valid email address."
+    ]
+}
+```
+
+Validation errors depend on the field being updated.
+
+---
+
+## Notes
+
+This endpoint performs a partial update (`PATCH`).
+
+Only the fields included in the request body are modified. All omitted fields remain unchanged.
+
+The `id` field is read-only and cannot be modified.
+
+The user is identified automatically from the JWT access token.
+
+---
+
+# Change Current User Password
+
+Changes the password of the currently authenticated user.
+
+The user must provide the current password and a new password.
+
+The new password must pass Django password validation rules.
+
+---
+
+## Endpoint
+
+```http
+PATCH /api/users/me/password/
+```
+
+## Authentication
+
+This endpoint requires a valid access token.
+
+Header:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Example:
+
+```http
+PATCH /api/users/me/password/
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+```
+
+---
+
+## Request
+
+The request body must contain the following fields:
+
+| Field              | Type   | Required | Description                      |
+|--------------------|--------|----------|----------------------------------|
+| `current_password` | string | Yes      | Current user password            |
+| `new_password`     | string | Yes      | New password                     |
+| `repeat_password`  | string | Yes      | Confirmation of new password     |
+
+Example:
+
+```json
+{
+    "current_password": "OldPassword123!",
+    "new_password": "NewPassword123!",
+    "repeat_password": "NewPassword123!"
+}
+```
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "message": "Password changed successfully",
+    "refresh": "eyJhbGciOiJIUzI1Ni...",
+    "access": "eyJhbGciOiJIUzI1Ni..."
+}
+```
+
+---
+
+## Errors
+
+### Missing Authentication
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Authentication credentials were not provided."
+}
+```
+
+---
+
+### Invalid or Expired Token
+
+Status:
+
+```http
+401 Unauthorized
+```
+
+Example:
+
+```json
+{
+    "detail": "Given token not valid for any token type",
+    "code": "token_not_valid"
+}
+```
+
+---
+
+### Incorrect Current Password
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "current_password": [
+        "Current password is incorrect."
+    ]
+}
+```
+
+---
+
+### Password Confirmation Does Not Match
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "password": [
+        "password field didn't match"
+    ]
+}
+```
+
+---
+
+### New Password Validation Error
+
+Status:
+
+```http
+400 Bad Request
+```
+
+Example:
+
+```json
+{
+    "new_password": [
+        "This password is too short. It must contain at least 8 characters.",
+        "This password is too common."
+    ]
+}
+```
+
+Validation rules are provided by Django's configured password validators.
+
+---
+
+## Notes
+
+The endpoint does not require or accept a user ID.
+
+The user is identified automatically from the JWT access token.
+
+After changing the password, the user receives a new access and refresh token pair for the current session.
+
+All previously issued refresh tokens are invalidated.
+
+Previously issued access tokens remain valid until expiration.
+
+# Search Users
+
+Searches for users by username, first name, or last name.
+
+The search is case-insensitive and matches partial text fragments.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/search/
+```
+
+---
+
+## Authentication
+
+This endpoint does not require authentication.
+
+No `Authorization` header is required.
+
+---
+
+## Request
+
+The search query is provided using the `q` query parameter.
+
+Example:
+
+```http
+GET /api/users/search/?q=john
+```
+
+---
+
+## Query Parameters
+
+| Parameter   | Type    | Required | Description                        |
+| ----------- | ------- | -------- | ---------------------------------- |
+| `q`         | string  | Yes      | Text fragment used to search users |
+| `page`      | integer | No       | Page number                        |
+| `page_size` | integer | No       | Number of results per page         |
+
+---
+
+## Search Behavior
+
+The search is performed using case-insensitive partial matching.
+
+The following user fields are searched:
+
+* `username`
+* `first_name`
+* `last_name`
+
+Example:
+
+Request:
+
+```http
+GET /api/users/search/?q=joh
+```
+
+The query above may return users containing the `joh` fragment in any searchable field.
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "count": 25,
+    "next": "http://api.example.com/api/users/search/?q=john&page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "username": "john",
+            "first_name": "John",
+            "last_name": "Smith"
+        },
+        {
+            "id": 2,
+            "username": "johanna",
+            "first_name": "Johanna",
+            "last_name": "Brown"
+        },
+        ...
+    ]
+}
+```
+
+The response example contains only a subset of returned users.
+
+---
+
+## Response Fields
+
+| Field      | Type    | Description                                                      |
+| ---------- | ------- | ---------------------------------------------------------------- |
+| `count`    | integer | Total number of matching users                                   |
+| `next`     | string  | URL of the next page, or `null` if there is no next page         |
+| `previous` | string  | URL of the previous page, or `null` if there is no previous page |
+| `results`  | array   | List of matching users                                           |
+
+---
+
+## User Object Fields
+
+Each user object contains:
+
+| Field        | Type    | Description            |
+| ------------ | ------- | ---------------------- |
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | Username               |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Pagination
+
+Results are paginated.
+
+Default page size:
+
+```text
+50 users per page
+```
+
+Maximum page size:
+
+```text
+100 users per page
+```
+
+The number of returned results can be changed using the `page_size` query parameter.
+
+Example:
+
+```http
+GET /api/users/search/?q=john&page=2&page_size=10
+```
+
+---
+
+## Empty Results
+
+If no users match the provided query, an empty result list is returned.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+{
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+}
+```
+
+---
+
+## Missing Query Parameter
+
+If the `q` parameter is not provided, the endpoint returns an empty result list.
+
+Status:
+
+```http
+200 OK
+```
+
+Example:
+
+```json
+{
+    "count": 0,
+    "next": null,
+    "previous": null,
+    "results": []
+}
+```
+
+---
+
+## Notes
+
+This endpoint returns only public user information.
+
+Private user data, such as email address or authentication-related fields, is not exposed.
+
+For detailed information about a single user, use the public profile endpoint:
+
+```http
+GET /api/users/profile/<username>/
+```
+
+# Get Public User Profile
+
+Returns public information about a user.
+
+This endpoint allows retrieving a user's public profile by username.
+
+The endpoint does not require authentication.
+
+---
+
+## Endpoint
+
+```http
+GET /api/users/profile/<username>/
+```
+
+Example:
+
+```http
+GET /api/users/profile/john/
+```
+
+---
+
+## Authentication
+
+This endpoint is public and does not require an access token.
+
+No `Authorization` header is required.
+
+---
+
+## Request
+
+No request body is required.
+
+The username is provided as a URL parameter.
+
+---
+
+## URL Parameters
+
+| Parameter  | Type   | Required | Description                    |
+| ---------- | ------ | -------- | ------------------------------ |
+| `username` | string | Yes      | Username of the requested user |
+
+---
+
+## Response
+
+Status:
+
+```http
+200 OK
+```
+
+Body:
+
+```json
+{
+    "id": 1,
+    "username": "john",
+    "first_name": "John",
+    "last_name": "Smith"
+}
+```
+
+---
+
+## Response Fields
+
+| Field        | Type    | Description            |
+| ------------ | ------- | ---------------------- |
+| `id`         | integer | Unique user identifier |
+| `username`   | string  | User's username        |
+| `first_name` | string  | User's first name      |
+| `last_name`  | string  | User's last name       |
+
+---
+
+## Errors
+
+### User Not Found
+
+Status:
+
+```http
+404 Not Found
+```
+
+Example:
+
+```json
+{
+    "detail": "No User matches the given query."
+}
+```
+
+---
+
+## Notes
+
+This endpoint returns only public user information.
+
+Private data such as email address and authentication-related information are not included in the response.
+
+The user is identified by the `username` parameter provided in the URL.
+
+The endpoint is intended for displaying public user profiles.
