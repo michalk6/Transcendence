@@ -20,6 +20,14 @@ class PrivateUserSerializer(serializers.ModelSerializer):
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
+    friendship_status = serializers.CharField(
+        default=None,
+        allow_null=True,
+    )
+    mutual_friends = serializers.IntegerField(
+        default=None,
+        allow_null=True,
+    )
 
     class Meta:
         model = User
@@ -28,6 +36,8 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "friendship_status",
+            "mutual_friends",
         ]
 
 

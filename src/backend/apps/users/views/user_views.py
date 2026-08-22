@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -10,9 +12,19 @@ from apps.users.serializers.user_serializers import (
 )
 from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
+from apps.users.queries import (
+    annotate_friendship_status,
+    annotate_mutual_friend_count,
+    filter_mutual_friends,
+    filter_not_mutual_friends,
+)
+from typing import TYPE_CHECKING, cast
 
 
-User = get_user_model()
+if TYPE_CHECKING:
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
@@ -27,6 +39,13 @@ class PublicUserView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     queryset = User.objects.all()
     lookup_field = "username"
+
+    def get_queryset(self):
+        user = cast(User | AnonymousUser, self.request.user)
+        queryset = super().get_queryset()
+        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
+        return queryset
 
 
 class SearchUserView(generics.ListAPIView):
@@ -44,7 +63,39 @@ class SearchUserView(generics.ListAPIView):
             | Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
         )
+        user = cast(User | AnonymousUser, self.request.user)
+        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
         return queryset
+
+
+class FriendListView(generics.ListAPIView):
+    serializer_class = PublicUserSerializer
+    permission_classes = [AllowAny]
+    pagination_class = UserListPagination
+
+    def get_queryset(self):
+        username = self.kwargs["username"]
+        inspected_user: User = get_object_or_404(User, username=username)
+        user = cast(User | AnonymousUser, self.request.user)
+        queryset = inspected_user.friends.all()
+        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
+        mutuality = self.request.query_params.get("mutuality")
+        if mutuality == "mutual":
+            queryset = filter_mutual_friends(queryset, user)
+        elif mutuality == "not_mutual":
+            queryset = filter_not_mutual_friends(queryset, user)
+        return queryset
+
+
+class BlocklistListView(generics.ListAPIView):
+    serializer_class = PublicUserSerializer
+    pagination_class = UserListPagination
+
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return user.blocklist.all()
 
 
 class PasswordChangeView(generics.GenericAPIView):
