@@ -37,7 +37,59 @@ register_doc = extend_schema_view(
                 ),
             ),
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Invalid input data."
+                description="Invalid input data.",
+            ),
+        },
+    ),
+)
+
+
+search_user_doc = extend_schema_view(
+    get=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="q",
+                type=OpenApiTypes.STR,
+                description="Search user by `username`, `first_name` or `last_name`.  \n"
+                            "Returns an empty list when the parameter is omitted",
+            ),
+        ],
+    ),
+)
+
+
+friend_list_doc = extend_schema_view(
+    get=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="mutuality",
+                type=OpenApiTypes.STR,
+                description="Enables filtering friends based on mutuality:  \n"
+                            "- `mutual` - shows mutual friends,\n"
+                            "- `not_mutual` - shows friends which authenticated user doesn't know.\n\n"
+                            "Filtering is applied only when user is logged in.",
+                enum=["mutual", "not_mutual"],
+            ),
+        ],
+    ),
+)
+
+
+password_change_doc = extend_schema_view(
+    patch=extend_schema(
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                response=inline_serializer(
+                    name="PasswordChangeResponse",
+                    fields={
+                        "message": serializers.CharField(),
+                        "refresh": serializers.CharField(),
+                        "access": serializers.CharField(),
+                    },
+                ),
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Invalid input data.",
             ),
         },
     ),
