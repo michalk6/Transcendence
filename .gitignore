@@ -225,3 +225,4 @@ __marimo__/
 
 # custom backend ignores
 schema.yml
+pyproject.toml
