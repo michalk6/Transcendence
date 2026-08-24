@@ -13,6 +13,7 @@ from apps.users.services.token_services import reset_refresh_tokens
 from apps.users.pagination import UserListPagination
 from apps.users.queries import (
     annotate_friendship_status,
+    annotate_and_sort_by_friendship_status,
     annotate_mutual_friend_count,
     filter_users_by_naming_fields,
     filter_mutual_friends,
@@ -62,8 +63,9 @@ class SearchUsersView(generics.ListAPIView):
             return User.objects.none()
         queryset = filter_users_by_naming_fields(queryset, q)
         user = cast(User | AnonymousUser, self.request.user)
-        queryset = annotate_friendship_status(queryset, user)
+        queryset = annotate_and_sort_by_friendship_status(queryset, user)
         queryset = annotate_mutual_friend_count(queryset, user)
+
         return queryset
 
 
@@ -79,8 +81,6 @@ class FriendListView(generics.ListAPIView):
         user = cast(User | AnonymousUser, self.request.user)
 
         queryset = inspected_user.friends.all()
-        queryset = annotate_friendship_status(queryset, user)
-        queryset = annotate_mutual_friend_count(queryset, user)
 
         mutuality = self.request.query_params.get("mutuality")
         if mutuality == "mutual":
@@ -91,6 +91,9 @@ class FriendListView(generics.ListAPIView):
         search_term = self.request.query_params.get("search")
         if search_term:
             queryset = filter_users_by_naming_fields(queryset, search_term)
+
+        queryset = annotate_and_sort_by_friendship_status(queryset, user)
+        queryset = annotate_mutual_friend_count(queryset, user)
 
         return queryset
 

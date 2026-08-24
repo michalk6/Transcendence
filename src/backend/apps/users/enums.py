@@ -7,3 +7,4 @@ class FriendshipStatus(StrEnum):
     REQUEST_RECEIVED = "request_received"
     NONE = "none"
     SELF = "self"
+    BLOCKED = "blocked"

@@ -10,74 +10,101 @@ def annotate_friendship_status(
     queryset: QuerySet[User],
     user: User | AnonymousUser,
 ) -> QuerySet[User]:
-    if user.is_authenticated:
-        user = cast(User, user)
-        queryset = queryset.annotate(
-            friendship_status=Case(
-                When(
-                    condition=Exists(user.friends.filter(pk=OuterRef("pk"))),
-                    then=Value(FriendshipStatus.FRIENDS),
-                ),
-                When(
-                    condition=Exists(FriendRequest.objects.filter(sender=user, receiver=OuterRef("pk"))),
-                    then=Value(FriendshipStatus.REQUEST_SENT),
-                ),
-                When(
-                    condition=Exists(FriendRequest.objects.filter(sender=OuterRef("pk"), receiver=user)),
-                    then=Value(FriendshipStatus.REQUEST_RECEIVED),
-                ),
-                When(
-                    condition=Q(pk=user.pk),
-                    then=Value(FriendshipStatus.SELF),
-                ),
-                default=Value(FriendshipStatus.NONE),
-            )
+    if not user.is_authenticated:
+        return queryset
+    user = cast(User, user)
+    return queryset.annotate(
+        friendship_status=Case(
+            When(
+                condition=Exists(user.friends.filter(pk=OuterRef("pk"))),
+                then=Value(FriendshipStatus.FRIENDS),
+            ),
+            When(
+                condition=Exists(user.blocklist.filter(pk=OuterRef("pk"))),
+                then=Value(FriendshipStatus.BLOCKED),
+            ),
+            When(
+                condition=Exists(FriendRequest.objects.filter(sender=user, receiver=OuterRef("pk"))),
+                then=Value(FriendshipStatus.REQUEST_SENT),
+            ),
+            When(
+                condition=Exists(FriendRequest.objects.filter(sender=OuterRef("pk"), receiver=user)),
+                then=Value(FriendshipStatus.REQUEST_RECEIVED),
+            ),
+            When(
+                condition=Q(pk=user.pk),
+                then=Value(FriendshipStatus.SELF),
+            ),
+            default=Value(FriendshipStatus.NONE),
         )
+    )
 
-    return queryset
+
+def annotate_and_sort_by_friendship_status(
+    queryset: QuerySet[User],
+    user: User | AnonymousUser,
+) -> QuerySet[User]:
+    if not user.is_authenticated:
+        return queryset
+    user = cast(User, user)
+    return annotate_friendship_status(queryset, user).annotate(
+        friendship_order=Case(
+            When(
+                condition=Q(friendship_status=FriendshipStatus.FRIENDS),
+                then=Value(0),
+            ),
+            When(
+                condition=Q(friendship_status=FriendshipStatus.BLOCKED),
+                then=Value(2),
+            ),
+            default=Value(1)
+        ),
+    ).order_by('friendship_order')
 
 
 def annotate_mutual_friend_count(
     queryset: QuerySet[User],
     user: User | AnonymousUser,
-):
-    if user.is_authenticated:
-        user = cast(User, user)
-        queryset = queryset.annotate(
-            mutual_friends=Case(
-                When(
-                    condition=Q(pk=user.pk),
-                    then=Value(None),
-                ),
-                default=Count(
-                    "friends",
-                    filter=Q(friends__in=user.friends.all()),
-                ),
+) -> QuerySet[User]:
+    if not user.is_authenticated:
+        return queryset
+    user = cast(User, user)
+    return queryset.annotate(
+        mutual_friends=Case(
+            When(
+                condition=Q(pk=user.pk),
+                then=Value(None),
             ),
-        )
-    return queryset
+            default=Count(
+                "friends",
+                filter=Q(friends__in=user.friends.all()),
+            ),
+        ),
+    )
 
 
 def filter_mutual_friends(
     queryset: QuerySet[User],
     user: User | AnonymousUser,
 ) -> QuerySet[User]:
+    if not user.is_authenticated:
+        return queryset
     user = cast(User, user)
-    queryset = queryset.filter(
+    return queryset.filter(
         pk__in=user.friends.all(),
     )
-    return queryset
 
 
 def filter_not_mutual_friends(
     queryset: QuerySet[User],
     user: User | AnonymousUser,
 ) -> QuerySet[User]:
+    if not user.is_authenticated:
+        return queryset
     user = cast(User, user)
-    queryset = queryset.exclude(pk=user.pk).exclude(
+    return queryset.exclude(pk=user.pk).exclude(
         pk__in=user.friends.all(),
     )
-    return queryset
 
 
 def filter_users_by_naming_fields(
