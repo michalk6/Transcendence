@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -15,6 +14,7 @@ from apps.users.pagination import UserListPagination
 from apps.users.queries import (
     annotate_friendship_status,
     annotate_mutual_friend_count,
+    filter_users_by_naming_fields,
     filter_mutual_friends,
     filter_not_mutual_friends,
 )
@@ -60,11 +60,7 @@ class SearchUserView(generics.ListAPIView):
         q = self.request.query_params.get("q")
         if not q:
             return User.objects.none()
-        queryset = queryset.filter(
-            Q(username__icontains=q)
-            | Q(first_name__icontains=q)
-            | Q(last_name__icontains=q)
-        )
+        queryset = filter_users_by_naming_fields(queryset, q)
         user = cast(User | AnonymousUser, self.request.user)
         queryset = annotate_friendship_status(queryset, user)
         queryset = annotate_mutual_friend_count(queryset, user)
