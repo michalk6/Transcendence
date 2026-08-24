@@ -18,7 +18,7 @@ from apps.users.queries import (
     filter_mutual_friends,
     filter_not_mutual_friends,
 )
-from apps.users.schemas import search_user_doc, friend_list_doc, password_change_doc
+from apps.users.schemas import search_user_doc, friend_list_doc, block_list_doc, password_change_doc
 from typing import TYPE_CHECKING, cast
 
 
@@ -50,7 +50,7 @@ class PublicUserView(generics.RetrieveAPIView):
 
 
 @search_user_doc
-class SearchUserView(generics.ListAPIView):
+class SearchUsersView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
     permission_classes = [AllowAny]
     pagination_class = UserListPagination
@@ -77,24 +77,38 @@ class FriendListView(generics.ListAPIView):
         username = self.kwargs["username"]
         inspected_user: User = get_object_or_404(User, username=username)
         user = cast(User | AnonymousUser, self.request.user)
+
         queryset = inspected_user.friends.all()
         queryset = annotate_friendship_status(queryset, user)
         queryset = annotate_mutual_friend_count(queryset, user)
+
         mutuality = self.request.query_params.get("mutuality")
         if mutuality == "mutual":
             queryset = filter_mutual_friends(queryset, user)
         elif mutuality == "not_mutual":
             queryset = filter_not_mutual_friends(queryset, user)
+
+        search_term = self.request.query_params.get("search")
+        if search_term:
+            queryset = filter_users_by_naming_fields(queryset, search_term)
+
         return queryset
 
 
+@block_list_doc
 class BlocklistListView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
     pagination_class = UserListPagination
 
     def get_queryset(self):
         user: User = cast(User, self.request.user)
-        return user.blocklist.all()
+        queryset = user.blocklist.all()
+
+        search_term = self.request.query_params.get("search")
+        if search_term:
+            queryset = filter_users_by_naming_fields(queryset, search_term)
+
+        return queryset
 
 
 @password_change_doc

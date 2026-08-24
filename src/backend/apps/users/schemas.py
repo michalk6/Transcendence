@@ -59,6 +59,13 @@ search_user_doc = extend_schema_view(
 )
 
 
+search_users_parameter = OpenApiParameter(
+    name="search",
+    type=OpenApiTypes.STR,
+    description="Search users by `username`, `first_name` or `last_name`.  \n"
+                "Search terms are split by whitespace and must all match.",
+)
+
 friend_list_doc = extend_schema_view(
     get=extend_schema(
         parameters=[
@@ -71,6 +78,16 @@ friend_list_doc = extend_schema_view(
                             "Filtering is applied only when user is logged in.",
                 enum=["mutual", "not_mutual"],
             ),
+            search_users_parameter,
+        ],
+    ),
+)
+
+
+block_list_doc = extend_schema_view(
+    get=extend_schema(
+        parameters=[
+            search_users_parameter,
         ],
     ),
 )

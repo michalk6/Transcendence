@@ -7,6 +7,6 @@ urlpatterns = [
     path("me/password/", user_views.PasswordChangeView.as_view()),
     path("profile/<str:username>/", user_views.PublicUserView.as_view()),
     path("profile/<str:username>/friends/", user_views.FriendListView.as_view()),
-    path("search/", user_views.SearchUserView.as_view()),
+    path("search/", user_views.SearchUsersView.as_view()),
     path("me/blocklist/", user_views.BlocklistListView.as_view()),
 ]
