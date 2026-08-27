@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied, BadRequest
+from django.core.exceptions import BadRequest
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -7,6 +7,10 @@ from typing import cast
 from apps.relations.serializers import FriendRequestSendSerializer, FriendRequestSerializer
 from apps.relations.models import FriendRequest
 from apps.relations.services import accept_request
+from apps.relations.schemas import (
+    send_friend_request_doc, accept_reject_friend_request_doc, delete_friend_request_doc,
+    remove_friend_doc, block_user_doc, unblock_user_doc,
+)
 from typing import TYPE_CHECKING
 
 
@@ -20,20 +24,19 @@ class ReceivedFriendRequestListView(generics.ListAPIView):
     serializer_class = FriendRequestSerializer
 
     def get_queryset(self):
-        return FriendRequest.objects.filter(
-            receiver=self.request.user,
-        )
+        user: User = cast(User, self.request.user)
+        return user.received_friend_requests.all()
 
 
 class SentFriendRequestListView(generics.ListAPIView):
     serializer_class = FriendRequestSerializer
 
     def get_queryset(self):
-        return FriendRequest.objects.filter(
-            sender=self.request.user,
-        )
+        user: User = cast(User, self.request.user)
+        return user.sent_friend_requests.all()
 
 
+@send_friend_request_doc
 class SendFriendRequestView(generics.GenericAPIView):
     serializer_class = FriendRequestSendSerializer
 
@@ -62,14 +65,14 @@ class SendFriendRequestView(generics.GenericAPIView):
         )
 
 
+@accept_reject_friend_request_doc
 class AcceptFriendRequestView(generics.GenericAPIView):
-    queryset = FriendRequest.objects.all()
+    def get_queryset(self):
+        user = cast(User, self.request.user)
+        return user.received_friend_requests.all()
 
     def post(self, request, *args, **kwargs):
         friend_request: FriendRequest = self.get_object()
-
-        if request.user != friend_request.receiver:
-            raise PermissionDenied()
 
         accept_request(friend_request)
         return Response(
@@ -78,14 +81,14 @@ class AcceptFriendRequestView(generics.GenericAPIView):
         )
 
 
+@accept_reject_friend_request_doc
 class RejectFriendRequestView(generics.GenericAPIView):
-    queryset = FriendRequest.objects.all()
+    def get_queryset(self):
+        user = cast(User, self.request.user)
+        return user.received_friend_requests.all()
 
     def post(self, request, *args, **kwargs):
         friend_request: FriendRequest = self.get_object()
-
-        if request.user != friend_request.receiver:
-            raise PermissionDenied()
 
         friend_request.delete()
         return Response(
@@ -94,6 +97,7 @@ class RejectFriendRequestView(generics.GenericAPIView):
         )
 
 
+@delete_friend_request_doc
 class DeleteFriendRequestView(generics.DestroyAPIView):
     def get_queryset(self):
         user: User = cast(User, self.request.user)
@@ -102,6 +106,7 @@ class DeleteFriendRequestView(generics.DestroyAPIView):
         )
 
 
+@remove_friend_doc
 class RemoveFriendView(generics.GenericAPIView):
     def get_queryset(self):
         user: User = cast(User, self.request.user)
@@ -117,6 +122,7 @@ class RemoveFriendView(generics.GenericAPIView):
         )
 
 
+@block_user_doc
 class BlockUserView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         user: User = request.user
@@ -142,6 +148,7 @@ class BlockUserView(generics.GenericAPIView):
         )
 
 
+@unblock_user_doc
 class UnblockUserView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         user: User = request.user

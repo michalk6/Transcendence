@@ -18,6 +18,7 @@ from apps.users.queries import (
     filter_mutual_friends,
     filter_not_mutual_friends,
 )
+from apps.users.schemas import search_user_doc, friend_list_doc, password_change_doc
 from typing import TYPE_CHECKING, cast
 
 
@@ -48,6 +49,7 @@ class PublicUserView(generics.RetrieveAPIView):
         return queryset
 
 
+@search_user_doc
 class SearchUserView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
     permission_classes = [AllowAny]
@@ -69,6 +71,7 @@ class SearchUserView(generics.ListAPIView):
         return queryset
 
 
+@friend_list_doc
 class FriendListView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
     permission_classes = [AllowAny]
@@ -98,6 +101,7 @@ class BlocklistListView(generics.ListAPIView):
         return user.blocklist.all()
 
 
+@password_change_doc
 class PasswordChangeView(generics.GenericAPIView):
     serializer_class = PasswordChangeSerializer
 

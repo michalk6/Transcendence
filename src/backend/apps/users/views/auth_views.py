@@ -4,8 +4,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from apps.users.serializers.auth_serializers import RegisterSerializer
 from apps.users.services.token_services import invalidate_all_refresh_tokens
+from apps.users.schemas import logout_all_docs, register_doc
 
 
+@register_doc
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
@@ -28,6 +30,7 @@ class RegisterView(generics.CreateAPIView):
         return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
 
+@logout_all_docs
 class LogoutAllView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -38,5 +41,5 @@ class LogoutAllView(generics.GenericAPIView):
             {
                 "message": "Logged out from all sessions successfully",
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
