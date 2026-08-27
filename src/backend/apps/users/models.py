@@ -1,6 +1,11 @@
 from __future__ import annotations
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from django.db.models.fields.related_descriptors import RelatedManager
+    from apps.relations.models import FriendRequest
 
 
 class User(AbstractUser):
@@ -16,6 +21,10 @@ class User(AbstractUser):
         symmetrical=False,
         blank=True,
     )
+
+    if TYPE_CHECKING:
+        sent_friend_requests: RelatedManager[FriendRequest]
+        received_friend_requests: RelatedManager[FriendRequest]
 
     def is_friend(self, other: User) -> bool:
         return self.friends.contains(other)
