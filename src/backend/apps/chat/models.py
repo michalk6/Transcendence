@@ -33,6 +33,12 @@ class ChatRoom(models.Model):
         to=User,
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    last_message = models.ForeignKey(
+        to="Message",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="last_message_for_rooms",
+    )
     last_message_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
