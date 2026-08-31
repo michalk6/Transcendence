@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from apps.chat.serializers import (
-    ChatRoomSerializer,
+    ChatRoomSerializer, MessageSerializer,
 )
 from typing import cast, TYPE_CHECKING
 
@@ -21,3 +22,15 @@ class ChatRoomListView(generics.ListAPIView):
             .prefetch_related("members")
             .select_related("last_message__sender")
         )
+
+
+class MessageListView(generics.ListAPIView):
+    serializer_class = MessageSerializer
+
+    def get_queryset(self):
+        user = cast(User, self.request.user)
+        chat_room = get_object_or_404(
+            user.chat_rooms.all(),
+            pk=self.kwargs["pk"],
+        )
+        return chat_room.messages.all()

@@ -3,5 +3,6 @@ from apps.chat import views
 
 
 urlpatterns = [
-    path("chat-rooms/", views.ChatRoomListView.as_view())
+    path("chat-rooms/", views.ChatRoomListView.as_view()),
+    path("chat-rooms/<uuid:pk>/messages/", views.MessageListView.as_view()),
 ]
