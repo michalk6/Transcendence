@@ -55,8 +55,30 @@ class MessageSerializer(serializers.ModelSerializer):
         ]
 
 
-class ChatRoomCreateSerializer(serializers.Serializer):
-    pass
+class ChatRoomCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ChatRoom
+        fields = [
+            "id",
+            "name",
+            "members",
+        ]
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        members = list(validated_data.get("members", []))
+
+        if user not in members:
+            members.append(user)
+        
+        if not validated_data.get("name"):
+            validated_data["name"] = " ".join([m.username for m in members])[:100]
+
+        validated_data["members"] = members
+        validated_data["room_type"] = ChatRoom.RoomType.GROUP
+
+        return super().create(validated_data)
 
 
 class MessageSendSerializer(serializers.Serializer):

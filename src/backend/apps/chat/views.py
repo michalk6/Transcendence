@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from apps.chat.serializers import (
     ChatRoomSerializer, MessageSerializer,
+    ChatRoomCreateSerializer
 )
 from typing import cast, TYPE_CHECKING
 
@@ -12,8 +13,11 @@ else:
     User = get_user_model()
 
 
-class ChatRoomListView(generics.ListAPIView):
-    serializer_class = ChatRoomSerializer
+class ChatRoomListView(generics.ListCreateAPIView):
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return ChatRoomCreateSerializer
+        return ChatRoomSerializer
 
     def get_queryset(self):
         user = cast(User, self.request.user)
