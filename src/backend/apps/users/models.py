@@ -21,9 +21,11 @@ class User(AbstractUser):
         to="self",
         symmetrical=False,
         blank=True,
+        related_name="blocklisted"
     )
 
     if TYPE_CHECKING:
+        blocklisted: RelatedManager[User]
         sent_friend_requests: RelatedManager[FriendRequest]
         received_friend_requests: RelatedManager[FriendRequest]
         chat_rooms: RelatedManager[ChatRoom]
