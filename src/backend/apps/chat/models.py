@@ -3,10 +3,11 @@ from django.contrib.auth import get_user_model
 import uuid
 from typing import TYPE_CHECKING
 
-User = get_user_model()
-
 if TYPE_CHECKING:
     from django.db.models.fields.related_descriptors import RelatedManager
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 
 class ChatRoom(models.Model):

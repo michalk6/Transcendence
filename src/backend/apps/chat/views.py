@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from apps.chat.serializers import (
     ChatRoomSerializer, MessageSerializer,
-    ChatRoomCreateSerializer, MessageSendSerializer
+    ChatRoomCreateSerializer, MessageCreateSerializer
 )
 from typing import cast, TYPE_CHECKING
 
@@ -38,3 +38,6 @@ class MessageListView(generics.ListAPIView):
             pk=self.kwargs["pk"],
         )
         return chat_room.messages.all()
+
+class MessageCreateView(generics.CreateAPIView):
+    serializer_class = MessageCreateSerializer
