@@ -77,6 +77,9 @@ class Message(models.Model):
         db_index=True,
     )
 
+    if TYPE_CHECKING:
+        last_message_for_rooms: RelatedManager[ChatRoom]
+
     class Meta:
         default_related_name = "messages"
         ordering = ["-created_at"]

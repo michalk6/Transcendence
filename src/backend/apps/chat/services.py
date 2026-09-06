@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from apps.chat.models import ChatRoom
-from django.db.models import Q
 
 if TYPE_CHECKING:
     from apps.users.models import User
