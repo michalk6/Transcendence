@@ -1,11 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import generics
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.request import Request
 from apps.chat.serializers import (
     ChatRoomSerializer, MessageSerializer,
     ChatRoomCreateSerializer, MessageCreateSerializer,
     MessageUpdateSerializer,
+    ChatRoomAddMembersSerializer,
 )
 from apps.chat.models import Message, ChatRoom
 from typing import cast, TYPE_CHECKING
@@ -70,3 +73,48 @@ class MessageUpdateDeleteView(generics.UpdateAPIView, generics.DestroyAPIView):
                     chat_room.save(update_fields=["last_message", "last_message_at"])
                 elif chat_room.room_type == ChatRoom.RoomType.PRIVATE:
                     chat_room.delete()
+
+
+class ChatRoomLeaveView(generics.GenericAPIView):
+    def get_queryset(self):
+        user = cast(User, self.request.user)
+        return user.chat_rooms.all()
+
+    def post(self, request, *args, **kwargs):
+        user: User = cast(User, request.user)
+        chat_room: ChatRoom = self.get_object()
+
+        if chat_room.room_type == ChatRoom.RoomType.PRIVATE:
+            return Response(
+                {"detail": "Cannot leave a private chat room."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+            chat_room.members.remove(user)
+            if not chat_room.members.exists():
+                chat_room.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ChatRoomAddMembersView(generics.GenericAPIView):
+    serializer_class = ChatRoomAddMembersSerializer
+
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return user.chat_rooms.all()
+
+    def post(self, request: Request, *args, **kwargs):
+        chat_room: ChatRoom = self.get_object()
+        if chat_room.room_type == ChatRoom.RoomType.PRIVATE:
+            return Response(
+                {"detail": "Cannot add members to private room."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = cast(
+            ChatRoomAddMembersSerializer, self.get_serializer(
+                instance=chat_room, data=request.data,
+            )
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)

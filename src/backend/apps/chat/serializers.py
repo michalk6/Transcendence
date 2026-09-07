@@ -4,7 +4,8 @@ from rest_framework.exceptions import ValidationError
 from apps.chat.models import ChatRoom, Message
 from django.contrib.auth import get_user_model
 from typing import TYPE_CHECKING, cast
-from apps.chat.services import create_private_chat_room
+from apps.chat.services import filter_blocklisted_members, create_private_chat_room
+from apps.chat.serializers_utils import build_warnings
 
 if TYPE_CHECKING:
     from apps.users.models import User
@@ -80,68 +81,19 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
     warnings = serializers.SerializerMethodField(read_only=True)
 
     def validate_members(self, value):
-        distinct = []
-        encountered = set()
-        for member in value:
-            if member not in encountered:
-                distinct.append(member)
-                encountered.add(member)
-        return distinct
-
-    def build_warnings(self, blocking, blocked_by):
-        warnings = {}
-        blocking = [
-            {"user_id": m.pk, "username": m.username}
-            for m in blocking
-        ]
-
-        blocked_by = [
-            {"user_id": m.pk, "username": m.username}
-            for m in blocked_by
-        ]
-
-        if blocking:
-            warnings["blocking"] = {
-                "message": "Some users cannot be added because you have blocked them.",
-                "users": blocking,
-            }
-        if blocked_by:
-            warnings["blocked_by"] = {
-                "message": "Some users cannot be added because they have blocked you.",
-                "users": blocked_by,
-            }
-        return warnings
+        return list(dict.fromkeys(value))
 
     def get_warnings(self, instance):
-        return self.build_warnings(
+        return build_warnings(
             getattr(instance, "_blocking", []),
             getattr(instance, "_blocked_by", []),
         )
-
-    def filter_blocklisted_members(self, members):
-        user = self.context["request"].user
-        accepted_members, blocking, blocked_by = [], [], []
-
-        members_pks = [m.pk for m in members]
-        blocklist = set(user.blocklist.filter(pk__in=members_pks))
-        blocklisted = set(user.blocklisted.filter(pk__in=members_pks))
-
-        for member in members:
-            if member in blocklist:
-                blocking.append(member)
-            elif member in blocklisted:
-                blocked_by.append(member)
-            else:
-                accepted_members.append(member)
-        return accepted_members, blocking, blocked_by
 
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data_members = list(validated_data.get("members", []))
         accepted_members, blocking, blocked_by = (
-            self.filter_blocklisted_members(
-                validated_data_members
-            )
+            filter_blocklisted_members(user, validated_data_members)
         )
 
         if user not in accepted_members:
@@ -150,7 +102,7 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
         if len(accepted_members) < 2:
             raise ValidationError({
                 "members": ["This list must contain at least one valid member."],
-                "warnings": self.build_warnings(blocking, blocked_by),
+                "warnings": build_warnings(blocking, blocked_by),
             })
 
         if not validated_data.get("name"):
@@ -162,8 +114,8 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
         validated_data["room_type"] = ChatRoom.RoomType.GROUP
 
         room = super().create(validated_data)
-        room._blocking = blocking
-        room._blocked_by = blocked_by
+        setattr(room, "_blocking", blocking)
+        setattr(room, "_blocked_by", blocked_by)
         return room
 
 
@@ -230,3 +182,37 @@ class MessageUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ["content"]
+
+
+class ChatRoomAddMembersSerializer(serializers.Serializer):
+    members = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=True,
+        many=True,
+    )
+    warnings = serializers.SerializerMethodField(read_only=True)
+
+    def validate_members(self, value):
+        if not value:
+            raise ValidationError("This list may not be empty.")
+        return list(dict.fromkeys(value))
+
+    def get_warnings(self, instance):
+        return build_warnings(
+            getattr(instance, "_blocking", []),
+            getattr(instance, "_blocked_by", []),
+        )
+
+    def update(self, instance: ChatRoom, validated_data):
+        user: User = cast(User, self.context["request"].user)
+        validated_data_members = list(validated_data.get("members", []))
+
+        accepted_members, blocking, blocked_by = (
+            filter_blocklisted_members(user, validated_data_members)
+        )
+        if accepted_members:
+            instance.members.add(*accepted_members)
+
+        setattr(instance, "_blocking", blocking)
+        setattr(instance, "_blocked_by", blocked_by)
+        return instance
