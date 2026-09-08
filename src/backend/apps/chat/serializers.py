@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from apps.chat.models import ChatRoom, Message
 from django.contrib.auth import get_user_model
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from apps.chat.services import filter_blocklisted_members, create_private_chat_room
 from apps.chat.serializers_utils import build_warnings
 
@@ -30,7 +30,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
 
-    def get_name(self, instance):
+    def get_name(self, instance: ChatRoom) -> str:
         if not instance.name and instance.room_type == ChatRoom.RoomType.PRIVATE:
             member = instance.members.exclude(
                 pk=self.context["request"].user.pk
@@ -43,7 +43,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
         return instance.name
 
-    def get_last_message(self, instance):
+    def get_last_message(self, instance: ChatRoom) -> str | None:
         if not instance.last_message:
             return None
         sender = instance.last_message.sender
@@ -83,7 +83,7 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
     def validate_members(self, value):
         return list(dict.fromkeys(value))
 
-    def get_warnings(self, instance):
+    def get_warnings(self, instance) -> dict[str, Any]:
         return build_warnings(
             getattr(instance, "_blocking", []),
             getattr(instance, "_blocked_by", []),
@@ -197,7 +197,7 @@ class ChatRoomAddMembersSerializer(serializers.Serializer):
             raise ValidationError("This list may not be empty.")
         return list(dict.fromkeys(value))
 
-    def get_warnings(self, instance):
+    def get_warnings(self, instance) -> dict[str, Any]:
         return build_warnings(
             getattr(instance, "_blocking", []),
             getattr(instance, "_blocked_by", []),

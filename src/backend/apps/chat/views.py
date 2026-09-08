@@ -11,6 +11,10 @@ from apps.chat.serializers import (
     ChatRoomAddMembersSerializer,
 )
 from apps.chat.models import Message, ChatRoom
+from apps.chat.schemas import (
+    chat_room_leave_doc, message_create_doc,
+    chat_room_add_members_doc, chat_room_retrieve_by_user_id_doc,
+)
 from rest_framework.exceptions import ValidationError, NotFound
 from typing import cast, TYPE_CHECKING
 
@@ -47,7 +51,8 @@ class MessageListView(generics.ListAPIView):
         return chat_room.messages.all()
 
 
-class ChatRoomRetrieveView(generics.RetrieveAPIView):
+@chat_room_retrieve_by_user_id_doc
+class ChatRoomRetrieveByUserIdView(generics.RetrieveAPIView):
     serializer_class = ChatRoomSerializer
 
     def get_queryset(self):
@@ -70,6 +75,7 @@ class ChatRoomRetrieveView(generics.RetrieveAPIView):
         return obj
 
 
+@message_create_doc
 class MessageCreateView(generics.CreateAPIView):
     serializer_class = MessageCreateSerializer
 
@@ -99,6 +105,7 @@ class MessageUpdateDeleteView(generics.UpdateAPIView, generics.DestroyAPIView):
                     chat_room.delete()
 
 
+@chat_room_leave_doc
 class ChatRoomLeaveView(generics.GenericAPIView):
     def get_queryset(self):
         user = cast(User, self.request.user)
@@ -120,6 +127,7 @@ class ChatRoomLeaveView(generics.GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@chat_room_add_members_doc
 class ChatRoomAddMembersView(generics.GenericAPIView):
     serializer_class = ChatRoomAddMembersSerializer
 
