@@ -8,11 +8,11 @@ from apps.chat.serializers import (
     ChatRoomSerializer, MessageSerializer,
     ChatRoomCreateSerializer, MessageCreateSerializer,
     MessageUpdateSerializer,
-    ChatRoomAddMembersSerializer,
+    ChatRoomAddMembersSerializer, ChatRoomChangeNameSerializer,
 )
 from apps.chat.models import Message, ChatRoom
 from apps.chat.schemas import (
-    chat_room_leave_doc, message_create_doc,
+    chat_room_leave_doc, message_create_doc, chat_room_change_name_doc,
     chat_room_add_members_doc, chat_room_retrieve_by_user_id_doc,
 )
 from rest_framework.exceptions import ValidationError, NotFound
@@ -150,3 +150,15 @@ class ChatRoomAddMembersView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@chat_room_change_name_doc
+class ChatRoomChangeNameView(generics.UpdateAPIView):
+    serializer_class = ChatRoomChangeNameSerializer
+
+    def get_queryset(self):
+        user: User = cast(User, self.request.user)
+        return user.chat_rooms.filter(room_type=ChatRoom.RoomType.GROUP)
+
+    def put(self, request, *args, **kwargs):
+        self.http_method_not_allowed(request, *args, **kwargs)

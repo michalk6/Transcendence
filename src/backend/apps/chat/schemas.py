@@ -2,7 +2,9 @@ from drf_spectacular.utils import (
     extend_schema, extend_schema_view, OpenApiResponse
 )
 from rest_framework import status
-from apps.chat.serializers import ChatRoomAddMembersSerializer, ChatRoomSerializer
+from apps.chat.serializers import (
+    ChatRoomAddMembersSerializer, ChatRoomChangeNameSerializer, ChatRoomSerializer,
+)
 
 
 chat_room_leave_doc = extend_schema_view(
@@ -50,5 +52,20 @@ chat_room_retrieve_by_user_id_doc = extend_schema_view(
                 description="Cannot message yourself."
             ),
         },
+    )
+)
+
+
+chat_room_change_name_doc = extend_schema_view(
+    patch=extend_schema(
+        responses={
+            status.HTTP_200_OK: ChatRoomChangeNameSerializer(),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="New name cannot be blank."
+            ),
+        },
+    ),
+    put=extend_schema(
+        description="Method \"PUT\" not allowed.",
     )
 )

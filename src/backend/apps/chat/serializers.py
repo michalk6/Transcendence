@@ -216,3 +216,15 @@ class ChatRoomAddMembersSerializer(serializers.Serializer):
         setattr(instance, "_blocking", blocking)
         setattr(instance, "_blocked_by", blocked_by)
         return instance
+
+
+class ChatRoomChangeNameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ChatRoom
+        fields = ["name"]
+
+    def validate_name(self, value):
+        if not value or not value.rstrip():
+            raise ValidationError("New name cannot be blank")
+        return value
