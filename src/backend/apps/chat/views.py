@@ -11,6 +11,7 @@ from apps.chat.serializers import (
     ChatRoomAddMembersSerializer,
 )
 from apps.chat.models import Message, ChatRoom
+from rest_framework.exceptions import ValidationError, NotFound
 from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -44,6 +45,29 @@ class MessageListView(generics.ListAPIView):
             pk=self.kwargs["pk"],
         )
         return chat_room.messages.all()
+
+
+class ChatRoomRetrieveView(generics.RetrieveAPIView):
+    serializer_class = ChatRoomSerializer
+
+    def get_queryset(self):
+        user = cast(User, self.request.user)
+        return user.chat_rooms.filter(room_type=ChatRoom.RoomType.PRIVATE)
+
+    def get_object(self):
+        user = cast(User, self.request.user)
+        target_user_id = self.kwargs["user_id"]
+
+        if target_user_id == user.pk:
+            raise ValidationError({"detail": "Cannot message yourself."})
+
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = queryset.filter(members=target_user_id).first()
+
+        if not obj:
+            raise NotFound("No ChatRoom matches the given query.")
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
 class MessageCreateView(generics.CreateAPIView):
