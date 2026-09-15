@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from django.db.models.fields.related_descriptors import RelatedManager
     from apps.relations.models import FriendRequest
+    from apps.chat.models import ChatRoom, Message
 
 
 class User(AbstractUser):
@@ -20,11 +21,15 @@ class User(AbstractUser):
         to="self",
         symmetrical=False,
         blank=True,
+        related_name="blocklisted"
     )
 
     if TYPE_CHECKING:
+        blocklisted: RelatedManager[User]
         sent_friend_requests: RelatedManager[FriendRequest]
         received_friend_requests: RelatedManager[FriendRequest]
+        chat_rooms: RelatedManager[ChatRoom]
+        messages: RelatedManager[Message]
 
     def is_friend(self, other: User) -> bool:
         return self.friends.contains(other)
