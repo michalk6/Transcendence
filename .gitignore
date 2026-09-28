@@ -226,3 +226,6 @@ __marimo__/
 # custom backend ignores
 schema.yml
 pyproject.toml
+
+# local notes and course materials
+*.subject.pdf
