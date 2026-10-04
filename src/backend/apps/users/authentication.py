@@ -1,6 +1,15 @@
+from typing import TypeVar
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from rest_framework.request import Request
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import Token
+from django.contrib.auth.models import AbstractBaseUser
+from rest_framework_simplejwt.models import TokenUser
+from django.conf import settings
 
+AuthUser = TypeVar("AuthUser", AbstractBaseUser, TokenUser)
 
 User = get_user_model()
 
@@ -21,3 +30,17 @@ class EmailBackend(ModelBackend):
                 return user
 
         return None
+
+
+class CookieJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request: Request) -> tuple[AuthUser, Token] | None:
+        raw_token = request.COOKIES.get(
+            settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
+        )
+
+        if raw_token is None:
+            return None
+
+        validated_token = self.get_validated_token(raw_token.encode("utf-8"))
+
+        return self.get_user(validated_token), validated_token
