@@ -1,14 +1,20 @@
+import { useState } from 'react'
 import Container from 'react-bootstrap/Container'
 import Card from 'react-bootstrap/Card'
 import Button from 'react-bootstrap/Button'
 
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import SidePanel from '../components/SidePanel'
 
-export default function Game({ onNavigate, user }) {
+export default function Game({ onNavigate, user, onLogout }) {
+  const [panelOpen, setPanelOpen] = useState(false)
+
   return (
     <>
-      <Header onNavigate={onNavigate} user={user} />
+      <Header onNavigate={onNavigate} user={user} onOpenPanel={() => setPanelOpen(true)} />
+
+      <SidePanel show={panelOpen} onHide={() => setPanelOpen(false)} user={user} onLogout={onLogout} />
 
       <Container className="py-4 d-flex flex-column align-items-center">
         <Button
