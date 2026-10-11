@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from apps.users.serializers.auth_serializers import RegisterSerializer
 from apps.users.services.token_services import invalidate_all_refresh_tokens
 from apps.users.utils.cookie_utils import set_auth_cookies, delete_auth_cookies
@@ -60,14 +61,17 @@ class CookieTokenRefreshView(TokenRefreshView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if isinstance(request.data, dict) and refresh_token and "refresh" not in request.data:
-            request.data["refresh"] = refresh_token
+        serializer = self.get_serializer(data={"refresh": refresh_token})
 
-        response = super().post(request, *args, **kwargs)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0]) from e
 
-        if response.status_code == 200:
-            response = set_auth_cookies(response)
-            response.data["detail"] = "Tokens successfully refreshed."
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        response = set_auth_cookies(response)
+        response.data["detail"] = "Tokens successfully refreshed."
 
         return response
 
@@ -84,13 +88,16 @@ class CookieTokenBlacklistView(TokenBlacklistView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if isinstance(request.data, dict) and refresh_token and "refresh" not in request.data:
-            request.data["refresh"] = refresh_token
+        serializer = self.get_serializer(data={"refresh": refresh_token})
 
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            response = delete_auth_cookies(response)
-            response.data["detail"] = "Successfully logged out."
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0]) from e
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        response = delete_auth_cookies(response)
+        response.data["detail"] = "Successfully logged out."
 
         return response
 
@@ -102,9 +109,11 @@ class LogoutAllView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         invalidate_all_refresh_tokens(request.user)
 
-        return Response(
+        response = Response(
             {
                 "detail": "Logged out from all sessions successfully",
             },
             status=status.HTTP_200_OK,
         )
+
+        return delete_auth_cookies(response)
