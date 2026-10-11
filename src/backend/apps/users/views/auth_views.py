@@ -7,6 +7,8 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from apps.users.serializers.auth_serializers import RegisterSerializer
 from apps.users.services.token_services import invalidate_all_refresh_tokens
 from apps.users.utils.cookie_utils import set_auth_cookies, delete_auth_cookies
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 from django.conf import settings
 from apps.users.schemas import logout_all_docs, register_doc, login_doc, token_refresh_doc, logout_doc
 
@@ -32,7 +34,7 @@ class RegisterView(generics.CreateAPIView):
 
         headers = self.get_success_headers(serializer.data)
         response = Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
-        response = set_auth_cookies(response)
+        response = set_auth_cookies(request, response)
         response.data["detail"] = "Successfully registered."
         return response
 
@@ -43,13 +45,14 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
-            response = set_auth_cookies(response)
+            response = set_auth_cookies(request, response)
             response.data["detail"] = "Successfully logged in."
 
         return response
 
 
 @token_refresh_doc
+@method_decorator(csrf_protect, name='dispatch')
 class CookieTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(
@@ -70,13 +73,14 @@ class CookieTokenRefreshView(TokenRefreshView):
 
         response = Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-        response = set_auth_cookies(response)
+        response = set_auth_cookies(request, response)
         response.data["detail"] = "Tokens successfully refreshed."
 
         return response
 
 
 @logout_doc
+@method_decorator(csrf_protect, name='dispatch')
 class CookieTokenBlacklistView(TokenBlacklistView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(
@@ -103,6 +107,7 @@ class CookieTokenBlacklistView(TokenBlacklistView):
 
 
 @logout_all_docs
+@method_decorator(csrf_protect, name='dispatch')
 class LogoutAllView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
