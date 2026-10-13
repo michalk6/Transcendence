@@ -137,13 +137,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 AUTHENTICATION_BACKENDS = [
-    'apps.users.authentication.EmailBackend',
+    'apps.users.authentication.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'apps.users.authentication.CookieJWTAuthentication',
+        'apps.users.authentication.jwt.CookieJWTAuthentication',
     ),
 
     'DEFAULT_PERMISSION_CLASSES': [
