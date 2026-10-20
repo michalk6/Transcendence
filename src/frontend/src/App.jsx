@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import Game from './pages/Game'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import NotFound from './pages/NotFound'
 
 export function App() {
   const routerNavigate = useNavigate()
@@ -66,6 +67,7 @@ export function App() {
           )
         }
       />
+      <Route path="*" element={<NotFound onNavigate={navigate} user={user} />} />
     </Routes>
   )
 }
