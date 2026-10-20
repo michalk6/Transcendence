@@ -13,7 +13,7 @@ export default function Register({ onNavigate, onAuthed }) {
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const username = usernameRef.current.value
     const email = emailRef.current.value
@@ -29,10 +29,21 @@ export default function Register({ onNavigate, onAuthed }) {
     }
 
     setSubmitting(true)
-    // TODO: wywolanie API
-    if (onAuthed) {
-      onAuthed({ username, email })
+    
+    const response = await fetch('/api/auth/register/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json',},
+      body: JSON.stringify({ username, email, password, repeat_password: repeatPassword}),
+    })
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setErrors(data)
+    } else {
+      onAuthed(data.user, data.access)
     }
+
     setSubmitting(false)
   }
 
