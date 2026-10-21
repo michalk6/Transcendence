@@ -132,7 +132,7 @@ class MessageCreateSerializer(serializers.Serializer):
     content = serializers.CharField()
 
     def validate(self, attrs):
-        user: User = cast(User, self.context["request"].user)
+        user: User = cast(User, self.context["user"])
         chat_room: ChatRoom | None = attrs.get("chat_room", None)
         receiver: User | None = attrs.get("receiver", None)
 
@@ -160,7 +160,7 @@ class MessageCreateSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        user: User = self.context["request"].user
+        user: User = self.context["user"]
         chat_room: ChatRoom | None = validated_data.get("chat_room", None)
         receiver: User | None = validated_data.pop("receiver", None)
         with transaction.atomic():

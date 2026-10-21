@@ -8,36 +8,60 @@ from rest_framework import serializers, status
 from apps.users.serializers.auth_serializers import RegisterSerializer
 
 
-logout_all_docs = extend_schema_view(
-    post=extend_schema(
-        request=None,
-        responses={
-            status.HTTP_200_OK: OpenApiResponse(
-                response=inline_serializer(
-                    name="LogoutAllResponse",
-                    fields={"message": serializers.CharField()},
-                ),
-            ),
-        },
-    ),
-)
-
-
 register_doc = extend_schema_view(
     post=extend_schema(
+        description="Registers a new user and sets authentication cookies automatically.",
         responses={
             status.HTTP_201_CREATED: OpenApiResponse(
                 response=inline_serializer(
                     name="RegisterResponse",
                     fields={
                         "user": RegisterSerializer(),
-                        "refresh": serializers.CharField(),
-                        "access": serializers.CharField(),
+                        "detail": serializers.CharField(),
                     },
                 ),
             ),
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Invalid input data.",
+            ),
+        },
+    ),
+)
+
+
+login_doc = extend_schema_view(
+    post=extend_schema(
+        description="Authenticates credentials and returns HttpOnly cookies for access and refresh tokens.",
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                response=inline_serializer(
+                    name="LoginResponse",
+                    fields={"detail": serializers.CharField()},
+                ),
+                description="Successfully logged in. Auth cookies set.",
+            ),
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Invalid credentials.",
+            ),
+        },
+    ),
+)
+
+
+token_refresh_doc = extend_schema_view(
+    post=extend_schema(
+        description="Reads the refresh token from HttpOnly cookies and sets a new access token cookie.",
+        request=None,
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                response=inline_serializer(
+                    name="TokenRefreshResponse",
+                    fields={"detail": serializers.CharField()},
+                ),
+                description="Tokens successfully refreshed. New cookie set.",
+            ),
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Invalid or expired refresh token cookie.",
             ),
         },
     ),
@@ -111,4 +135,40 @@ password_change_doc = extend_schema_view(
             ),
         },
     ),
+)
+
+
+logout_all_docs = extend_schema_view(
+    post=extend_schema(
+        request=None,
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                response=inline_serializer(
+                    name="LogoutAllResponse",
+                    fields={"detail": serializers.CharField()},
+                ),
+            ),
+        },
+    ),
+)
+
+
+logout_doc = extend_schema(
+    description=(
+        "Reads the refresh token from the HttpOnly cookie, adds it to the blacklist, "
+        "and clears all authentication cookies from the browser."
+    ),
+    request=None,
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(
+            response=inline_serializer(
+                name="LogoutResponse",
+                fields={"detail": serializers.CharField()},
+            ),
+            description="Successfully logged out and cookies cleared.",
+        ),
+        status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+            description="Token invalid or already blacklisted.",
+        ),
+    },
 )
