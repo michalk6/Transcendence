@@ -1,6 +1,7 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from apps.chat.serializers import MessageCreateSerializer
+from rest_framework.exceptions import ValidationError
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -21,12 +22,37 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(self.user_group, self.channel_name)
 
     async def receive_json(self, content, **kwargs) -> None:
-        if content["action"] == "send_message":
+        if not isinstance(content, dict):
+            await self.send_json({"action": "error", "detail": "Invalid JSON format."})
+            return
+
+        action = content.get("action")
+        if action != "send_message":
+            await self.send_json({"action": "error", "detail": "Unknown action."})
+            return
+
+        message = content.get("message")
+        if not isinstance(message, dict):
+            await self.send_json({
+                "action": "error",
+                "detail": "Message must be a JSON object.",
+            })
+            return
+
+        if action == "send_message":
             await self.handle_send_message(content["message"])
 
     async def handle_send_message(self, message):
-        message_dict = await self.create_message(message)
-        member_ids = message_dict.pop("member_ids", [])
+        try:
+            message_dict = await self.create_message(message)
+            member_ids = message_dict.pop("member_ids", [])
+        except ValidationError as err:
+            await self.send_json({
+                "action": "error",
+                "detail": str(err.detail),
+            })
+            return
+
         for member_id in member_ids:
             member_group = f"user_{member_id}"
             await self.channel_layer.group_send(
