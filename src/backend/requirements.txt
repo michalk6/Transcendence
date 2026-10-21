@@ -3,3 +3,5 @@ djangorestframework
 djangorestframework-simplejwt
 environs
 drf-spectacular
+psycopg2-binary
+daphne
