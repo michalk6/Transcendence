@@ -41,7 +41,7 @@ export default function Register({ onNavigate, onAuthed }) {
     if (!response.ok) {
       setErrors(data)
     } else {
-      onAuthed(data.user, data.access)
+      onAuthed(data.user)
     }
 
     setSubmitting(false)

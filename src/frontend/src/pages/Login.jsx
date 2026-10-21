@@ -24,15 +24,12 @@ export default function Login({ onNavigate, onAuthed }) {
       body: JSON.stringify({ username, password }),
     })
 
-    const data = await response.json()
     if (!response.ok) {
       setFormError('Invalid username or password')
     } else {
-      const meResponse = await fetch('/api/users/me/', {
-        headers: { Authorization: `Bearer ${data.access}` },
-      })
+      const meResponse = await fetch('/api/users/me/')
       const user = await meResponse.json()
-      onAuthed(user, data.access)
+      onAuthed(user)
     }
 
     setSubmitting(false)
