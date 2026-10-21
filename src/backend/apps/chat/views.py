@@ -79,6 +79,12 @@ class ChatRoomRetrieveByUserIdView(generics.RetrieveAPIView):
 class MessageCreateView(generics.CreateAPIView):
     serializer_class = MessageCreateSerializer
 
+    def get_serializer_context(self):
+        return {
+            **super().get_serializer_context(),
+            "user": self.request.user,
+        }
+
 
 class MessageUpdateDeleteView(generics.UpdateAPIView, generics.DestroyAPIView):
     serializer_class = MessageUpdateSerializer
