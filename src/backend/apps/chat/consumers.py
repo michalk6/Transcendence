@@ -2,6 +2,14 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from apps.chat.serializers import MessageCreateSerializer
 from rest_framework.exceptions import ValidationError
+from apps.chat.presence import add_connection, remove_connection, is_online, get_online_users
+
+
+ONLINE_USERS_GROUP = "online_users"
+
+
+def user_group(user_pk):
+    return f"user_{user_pk}"
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -12,14 +20,56 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4401)
             return
 
-        self.user_group = f"user_{user.pk}"
+        self.user_group = user_group(user.pk)
         await self.channel_layer.group_add(self.user_group, self.channel_name)
+        await self.channel_layer.group_add(ONLINE_USERS_GROUP, self.channel_name)
 
+        await add_connection(user.pk, self.channel_name)
         await self.accept()
+        await self.handle_go_online()
+
+    async def handle_go_online(self):
+        await self.broadcast_status("online")
 
     async def disconnect(self, code: int) -> None:
+        user = self.scope.get("user")
+        if user is None or not user.is_authenticated:
+            return
+
+        await remove_connection(user.pk, self.channel_name)
+
         if hasattr(self, "user_group"):
             await self.channel_layer.group_discard(self.user_group, self.channel_name)
+        await self.channel_layer.group_discard(ONLINE_USERS_GROUP, self.channel_name)
+
+        await self.handle_go_offline()
+
+    async def handle_go_offline(self):
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated:
+            return
+        if await is_online(user.pk):
+            return
+        await self.broadcast_status("offline")
+
+    async def broadcast_status(self, status):
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated:
+            return
+        await self.channel_layer.group_send(
+            ONLINE_USERS_GROUP,
+            {
+                "type": "send.status",
+                "user_id": user.pk,
+                "status": status,
+            }
+        )
+
+    async def send_status(self, event):
+        await self.send_json({
+            "user_id": event.get("user_id"),
+            "status": event.get("status"),
+        })
 
     async def receive_json(self, content, **kwargs) -> None:
         if not isinstance(content, dict):
@@ -54,7 +104,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         for member_id in member_ids:
-            member_group = f"user_{member_id}"
+            member_group = user_group(member_id)
             await self.channel_layer.group_send(
                 member_group,
                 {

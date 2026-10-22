@@ -5,3 +5,5 @@ environs
 drf-spectacular
 channels
 daphne
+redis
+channels-redis
