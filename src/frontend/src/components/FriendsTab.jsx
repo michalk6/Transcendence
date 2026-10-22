@@ -3,19 +3,45 @@ import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 import Alert from 'react-bootstrap/Alert'
+import Pagination from 'react-bootstrap/Pagination'
+
+const RESULTS_PAGE_SIZE = 10
 
 export default function FriendsTab({ username, onChanged }) {
   const [friends] = useState([])
   const [requests] = useState([])
   const [term, setTerm] = useState('')
-  const [results] = useState([])
+  const [results, setResults] = useState([])
+  const [resultsPage, setResultsPage] = useState(1)
+  const [resultsCount, setResultsCount] = useState(0)
   const [message, setMessage] = useState('')
-  const [error] = useState('')
+  const [error, setError] = useState('')
 
-  function handleSearch(event) {
+  const totalResultsPages = Math.ceil(resultsCount / RESULTS_PAGE_SIZE)
+
+  async function fetchResultsPage(pageNumber) {
+    const params = new URLSearchParams({
+      q: term,
+      page_size: RESULTS_PAGE_SIZE,
+      page: pageNumber,
+    })
+    const response = await fetch('/api/users/search/?' + params)
+    if (!response.ok) {
+      setError('Could not search users.')
+      return
+    }
+
+    const data = await response.json()
+    setResults(data.results)
+    setResultsCount(data.count)
+    setResultsPage(pageNumber)
+  }
+
+  async function handleSearch(event) {
     event.preventDefault()
-    // TODO: searchUsers
-    setMessage('Search will be available once the API is connected.')
+    setMessage('')
+    setError('')
+    await fetchResultsPage(1)
   }
 
   let messageAlert = null
@@ -26,6 +52,25 @@ export default function FriendsTab({ username, onChanged }) {
   let errorAlert = null
   if (error) {
     errorAlert = <Alert variant="danger" className="py-2">{error}</Alert>
+  }
+
+  let resultsPagination = null
+  if (totalResultsPages > 1) {
+    resultsPagination = (
+      <Pagination size="sm" className="mb-2 justify-content-center">
+        <Pagination.Prev
+          disabled={resultsPage <= 1}
+          onClick={() => fetchResultsPage(resultsPage - 1)}
+        />
+        <Pagination.Item disabled>
+          {resultsPage} / {totalResultsPages}
+        </Pagination.Item>
+        <Pagination.Next
+          disabled={resultsPage >= totalResultsPages}
+          onClick={() => fetchResultsPage(resultsPage + 1)}
+        />
+      </Pagination>
+    )
   }
 
   return (
@@ -46,19 +91,23 @@ export default function FriendsTab({ username, onChanged }) {
       </Form>
 
       {results.length > 0 && (
-        <ListGroup className="mb-3">
-          {results.map((user) => (
-            <ListGroup.Item
-              key={user.id}
-              className="d-flex justify-content-between align-items-center"
-            >
-              <span>{user.username}</span>
-              <Button size="sm" className="btn-register">
-                Add
-              </Button>
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
+        <>
+          {resultsPagination}
+
+          <ListGroup className="mb-2">
+            {results.map((user) => (
+              <ListGroup.Item
+                key={user.id}
+                className="d-flex justify-content-between align-items-center"
+              >
+                <span>{user.username}</span>
+                <Button size="sm" className="btn-register">
+                  Add
+                </Button>
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+        </>
       )}
 
       {requests.length > 0 && (
