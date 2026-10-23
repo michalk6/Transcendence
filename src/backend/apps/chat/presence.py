@@ -17,7 +17,7 @@ async def remove_connection(user_id, channel_name):
     await redis_client.srem(presence_key(user_id), channel_name)
 
 
-async def get_online_users():
+async def get_online_user_ids():
     async_iter = redis_client.scan_iter(presence_key("*"))
     users = set()
     async for key in async_iter:

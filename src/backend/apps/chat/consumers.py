@@ -2,7 +2,16 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from apps.chat.serializers import MessageCreateSerializer
 from rest_framework.exceptions import ValidationError
-from apps.chat.presence import add_connection, remove_connection, is_online, get_online_users
+from apps.chat.presence import add_connection, remove_connection, is_online, get_online_user_ids
+from django.contrib.auth import get_user_model
+from apps.users.queries import annotate_and_sort_by_friendship_status
+from apps.users.serializers.user_serializers import PublicUserSerializer
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from apps.users.models import User
+else:
+    User = get_user_model()
 
 
 ONLINE_USERS_GROUP = "online_users"
@@ -77,20 +86,26 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         action = content.get("action")
-        if action != "send_message":
+        if action == "get_online_users":
+            await self.handle_get_online_users()
+        elif action == "send_message":
+            message = content.get("message")
+            if not isinstance(message, dict):
+                await self.send_json({
+                    "action": "error",
+                    "detail": "Message must be a JSON object.",
+                })
+                return
+            await self.handle_send_message(message)
+        else:
             await self.send_json({"action": "error", "detail": "Unknown action."})
-            return
 
-        message = content.get("message")
-        if not isinstance(message, dict):
-            await self.send_json({
-                "action": "error",
-                "detail": "Message must be a JSON object.",
-            })
-            return
-
-        if action == "send_message":
-            await self.handle_send_message(content["message"])
+    async def handle_get_online_users(self):
+        online_user_ids = await get_online_user_ids()
+        online_users = await self.retrieve_users_from_db(online_user_ids)
+        await self.send_json({
+            "online_users": online_users,
+        })
 
     async def handle_send_message(self, message):
         try:
@@ -137,3 +152,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "created_at": saved_message.created_at.isoformat(),
             "member_ids": member_ids,
         }
+
+    @database_sync_to_async
+    def retrieve_users_from_db(self, user_ids):
+        user = cast(User, self.scope.get("user"))
+        queryset = User.objects.filter(id__in=user_ids)
+        queryset = annotate_and_sort_by_friendship_status(queryset, user)
+        serializer = PublicUserSerializer(instance=queryset, many=True)
+        return serializer.data
