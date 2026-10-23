@@ -2,10 +2,13 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from apps.chat.serializers import MessageCreateSerializer
 from rest_framework.exceptions import ValidationError
-from apps.chat.presence import add_connection, remove_connection, is_online, get_online_user_ids
+from apps.chat.presence import (
+    add_connection, remove_connection, is_online, get_online_user_ids, refresh_presence, PRESENCE_TTL
+)
 from django.contrib.auth import get_user_model
 from apps.users.queries import annotate_and_sort_by_friendship_status
 from apps.users.serializers.user_serializers import PublicUserSerializer
+import asyncio
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -36,11 +39,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await add_connection(user.pk, self.channel_name)
         await self.accept()
         await self.handle_go_online()
+        self.heartbeat_task = asyncio.create_task(self.presence_heartbeat(user.pk))
 
     async def handle_go_online(self):
         await self.broadcast_status("online")
 
     async def disconnect(self, code: int) -> None:
+        if hasattr(self, "heartbeat_task"):
+            self.heartbeat_task.cancel()
         user = self.scope.get("user")
         if user is None or not user.is_authenticated:
             return
@@ -131,6 +137,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def message_created(self, event):
         message = event.get("message", {})
         await self.send_json(message, close=False)
+
+    async def presence_heartbeat(self, user_id):
+        while True:
+            await asyncio.sleep(PRESENCE_TTL // 3)
+            await refresh_presence(user_id)
 
     @database_sync_to_async
     def create_message(self, message):
