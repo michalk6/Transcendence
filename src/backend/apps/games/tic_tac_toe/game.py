@@ -1,3 +1,6 @@
+from typing import Self
+
+
 class InvalidMove(Exception):
     pass
 
@@ -56,6 +59,19 @@ class InnerBoard:
         if self.winner is None and self.is_board_full():
             self.winner = "draw"
         return self.winner
+
+    def to_dict(self) -> dict:
+        return {
+            "cells": self.cells,
+            "winner": self.winner,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Self:
+        inner_board = cls()
+        inner_board.cells = data["cells"]
+        inner_board.winner = data["winner"]
+        return inner_board
 
 
 class Game:
@@ -128,3 +144,20 @@ class Game:
         if self.winner is None and self.is_board_full():
             self.winner = "draw"
         return self.winner
+
+    def to_dict(self) -> dict:
+        return {
+            "board": [inner.to_dict() for inner in self.board],
+            "current_player": self.current_player,
+            "next_board": self.next_board,
+            "winner": self.winner,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Self:
+        game = cls()
+        game.board = [InnerBoard.from_dict(inner) for inner in data["board"]]
+        game.current_player = data["current_player"]
+        game.next_board = data["next_board"]
+        game.winner = data["winner"]
+        return game
