@@ -11,7 +11,7 @@ ws://localhost:8000/ws/chat/
 The user must be logged in. Authentication uses JWT tokens stored in cookies.
 If the user is not authenticated, the connection is rejected (code `4401`).
 
-After connecting, the client can send JSON messages with an `action` field.
+The client sends JSON messages with an `action` field. Messages from the backend use a `type` field.
 
 ## Get online users
 
@@ -27,6 +27,7 @@ Response:
 
 ```json
 {
+  "type": "online_users",
   "online_users": [
     {
       "id": 536,
@@ -62,20 +63,24 @@ Received message:
 
 ```json
 {
-  "id": "message-uuid",
-  "sender": 536,
-  "content": "Hello!",
-  "chat_room": "room-uuid",
-  "created_at": "2026-10-23T18:00:00+00:00"
+  "type": "message_created",
+  "message": {
+    "id": "message-uuid",
+    "sender": 536,
+    "content": "Hello!",
+    "chat_room": "room-uuid",
+    "created_at": "2026-10-23T18:00:00+00:00"
+  }
 }
 ```
 
 ## Online and offline status
 
-When a user connects or disconnects, the backend sends a status update:
+When a user connects, the backend sends an online status update. When the user's last connection closes, it sends an offline status update.
 
 ```json
 {
+  "type": "user_status",
   "user_id": 536,
   "status": "online"
 }
@@ -93,12 +98,12 @@ For an unknown action or invalid data, the backend can send:
 
 ```json
 {
-  "action": "error",
+  "type": "error",
   "detail": "Unknown action."
 }
 ```
 
-Other errors include `Invalid JSON format.` and `Message must be a JSON object.`. Message validation errors are also returned with `action: "error"`.
+Other errors include `Invalid JSON format.` and `Message must be a JSON object.`. Message validation errors are also returned with `type: "error"`.
 
 ## Presence
 
