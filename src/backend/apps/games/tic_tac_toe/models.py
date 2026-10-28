@@ -9,6 +9,7 @@ class Match(models.Model):
         FINISHED = "finished", "Finished"
         IN_PROGRESS = "in_progress", "In progress"
         WAITING = "waiting", "Waiting for opponent"
+        ABORTED = "aborted", "Aborted"
 
     player_x = models.ForeignKey(
         to=User,

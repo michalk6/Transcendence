@@ -97,7 +97,12 @@ class Game:
         self.board[target_board].make_move(sign, target_cell)
         self.switch_turn()
         self.next_board = target_cell if self.board[target_cell].winner is None else None
-        return self.check_winner()
+        winner = self.check_winner()
+        if winner is None:
+            return f"next_{self.current_player}"
+        if winner == "draw":
+            return winner
+        return f"winner_{winner}"
 
     def check_rows(self) -> str | None:
         if self.board[0].winner == self.board[1].winner == self.board[2].winner \

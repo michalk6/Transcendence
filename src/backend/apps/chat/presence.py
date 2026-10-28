@@ -14,8 +14,8 @@ async def add_connection(user_id, channel_name):
     key = presence_key(user_id)
     await redis_client.sadd(key, channel_name)
     await redis_client.expire(key, PRESENCE_TTL)
-    
-    
+
+
 async def refresh_presence(user_id):
     key = presence_key(user_id)
     await redis_client.expire(key, PRESENCE_TTL)
