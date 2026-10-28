@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Offcanvas from 'react-bootstrap/Offcanvas'
 import Tab from 'react-bootstrap/Tab'
 import Tabs from 'react-bootstrap/Tabs'
@@ -6,6 +7,9 @@ import FriendsTab from './FriendsTab'
 import BlocklistTab from './BlocklistTab'
 
 export default function SidePanel({ show, onHide, user, onLogout }) {
+  const [reloadKey, setReloadKey] = useState(0)
+  const bump = () => setReloadKey(reloadKey + 1)
+
   return (
     <Offcanvas show={show} onHide={onHide} placement="end" className="bg-body-tertiary">
       <Offcanvas.Header closeButton closeVariant="white">
@@ -27,11 +31,11 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
             </Tab>
 
             <Tab eventKey="friends" title="Friends">
-              <FriendsTab username={user.username} />
+              <FriendsTab username={user.username} onChanged={bump} />
             </Tab>
 
             <Tab eventKey="blocked" title="Blocked">
-              <BlocklistTab />
+              <BlocklistTab reloadKey={reloadKey} />
             </Tab>
 
             <Tab eventKey="chat" title="Chat">

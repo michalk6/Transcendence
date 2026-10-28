@@ -5,7 +5,6 @@ import Col from 'react-bootstrap/Col'
 import Card from 'react-bootstrap/Card'
 import Button from 'react-bootstrap/Button'
 
-// OWN COMPONENTS
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SidePanel from '../components/SidePanel'
@@ -55,17 +54,7 @@ export default function Home({ onNavigate, user, onLogout }) {
             <Card bg="body-tertiary" className="h-100">
               <Card.Body>
                 <Card.Title>Top 3 Ranking</Card.Title>
-                <ol className="text-body-secondary mt-2 ps-3">
-                  {/* <li>
-                    <span className="text-body">CyberGamer</span> — 2100 ELO
-                  </li>
-                  <li>
-                    <span className="text-body">TicTacKing</span> — 1980 ELO
-                  </li>
-                  <li>
-                    <span className="text-body">Anonymous</span> — 1850 ELO
-                  </li> */}
-                </ol>
+                <ol className="text-body-secondary mt-2 ps-3"></ol>
               </Card.Body>
             </Card>
           </Col>

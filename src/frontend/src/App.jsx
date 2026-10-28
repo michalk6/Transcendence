@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
 import { getCsrfToken } from './csrf'
+import { apiFetch } from './api'
 
 export function App() {
   const routerNavigate = useNavigate()
@@ -16,7 +17,7 @@ export function App() {
 
   useEffect(() => {
     async function checkSession() {
-      const response = await fetch('/api/users/me/')
+      const response = await apiFetch('/api/users/me/')
       if (response.ok) {
         const data = await response.json()
         setUser(data)
@@ -27,7 +28,7 @@ export function App() {
   }, [])
 
   async function handleLogout() {
-    await fetch('/api/auth/logout/', {
+    await apiFetch('/api/auth/logout/', {
       method: 'POST',
       headers: { 'X-CSRFToken': getCsrfToken() },
     })
