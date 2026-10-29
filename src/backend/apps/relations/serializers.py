@@ -1,4 +1,5 @@
 from apps.relations.models import FriendRequest
+from apps.users.serializers.user_serializers import PublicUserSerializer
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from typing import TYPE_CHECKING
@@ -11,6 +12,9 @@ else:
 
 
 class FriendRequestSerializer(serializers.ModelSerializer):
+    sender = PublicUserSerializer(read_only=True)
+    receiver = PublicUserSerializer(read_only=True)
+
     class Meta:
         model = FriendRequest
         fields = [

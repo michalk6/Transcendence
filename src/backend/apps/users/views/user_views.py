@@ -58,11 +58,13 @@ class SearchUsersView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = User.objects.all()
+        user = cast(User | AnonymousUser, self.request.user)
+        if user.is_authenticated:
+            queryset = queryset.exclude(pk=user.pk)
         q = self.request.query_params.get("q")
         if not q:
             return User.objects.none()
         queryset = filter_users_by_naming_fields(queryset, q)
-        user = cast(User | AnonymousUser, self.request.user)
         queryset = annotate_and_sort_by_friendship_status(queryset, user)
         queryset = annotate_mutual_friend_count(queryset, user)
 

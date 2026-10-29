@@ -25,7 +25,7 @@ class ReceivedFriendRequestListView(generics.ListAPIView):
 
     def get_queryset(self):
         user: User = cast(User, self.request.user)
-        return user.received_friend_requests.all()
+        return user.received_friend_requests.select_related("sender", "receiver")
 
 
 class SentFriendRequestListView(generics.ListAPIView):
@@ -33,7 +33,7 @@ class SentFriendRequestListView(generics.ListAPIView):
 
     def get_queryset(self):
         user: User = cast(User, self.request.user)
-        return user.sent_friend_requests.all()
+        return user.sent_friend_requests.select_related("sender", "receiver")
 
 
 @send_friend_request_doc
