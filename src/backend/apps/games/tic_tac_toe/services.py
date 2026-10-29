@@ -1,20 +1,81 @@
-from apps.games.tic_tac_toe.game import Game
-from redis import asyncio, Redis
+from apps.games.tic_tac_toe.game import Game, InvalidMove
+from redis import Redis, asyncio as asyncio_redis
 from django.conf import settings
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from apps.games.tic_tac_toe.models import Match
 from django.contrib.auth import get_user_model
 import json
+import time
+import asyncio as asyncio_lib
 
 User = get_user_model()
 
 
 GAME_LOBBY_GROUP = "tic_tac_toe_lobby"
+TURN_TIME_LIMIT = 60
 
 redis_client = Redis.from_url(settings.REDIS_URL)
-async_redis_client = asyncio.from_url(settings.REDIS_URL)
+async_redis_client = asyncio_redis.from_url(settings.REDIS_URL)
 channel_layer = get_channel_layer()
+
+
+def turn_deadline_key(match_id: int) -> str:
+    return f"tic_tac:toe:match:{match_id}:turn_deadline"
+
+
+async def set_turn_deadline(match_id: int) -> float:
+    deadline = time.time() + TURN_TIME_LIMIT
+    await async_redis_client.set(
+        turn_deadline_key(match_id),
+        deadline,
+    )
+    return deadline
+
+
+async def get_turn_deadline(match_id: int) -> float | None:
+    deadline = await async_redis_client.get(
+        turn_deadline_key(match_id)
+    )
+    if deadline is None:
+        return None
+    return float(deadline)
+
+
+async def delete_turn_deadline(match_id: int) -> None:
+    await async_redis_client.delete(
+        turn_deadline_key(match_id)
+    )
+
+
+async def start_deadline_countdown(match_id: int, deadline):
+    await asyncio_lib.sleep(deadline - time.time())
+
+    lock = async_redis_client.lock(
+        match_lock_key(match_id),
+        timeout=10,
+        blocking_timeout=5,
+    )
+
+    async with lock:
+        current_deadline = await get_turn_deadline(match_id)
+        if current_deadline == deadline:
+            game = await read_match_state(match_id)
+            sign = game.current_player
+            user = await get_current_player(sign, match_id)
+            if not await set_forfeit_result(match_id, user):
+                return
+            await delete_match_state(match_id)
+            await delete_turn_deadline(match_id)
+            if channel_layer is not None:
+                await channel_layer.group_send(
+                    f"match_{match_id}",
+                    {
+                        "type": "user.forfeit",
+                        "user_id": user.pk,
+                    },
+                )
+            await broadcast_matches_updated()
 
 
 def match_key(match_id):
@@ -70,13 +131,42 @@ async def perform_make_move(
             return
 
         game = await read_match_state(match_id)
+        deadline = await get_turn_deadline(match_id)
+
+        if (
+            game.current_player == sign
+            and deadline is not None and time.time() > deadline
+        ):
+            if not await set_forfeit_result(match_id, user):
+                return
+            await delete_match_state(match_id)
+            await delete_turn_deadline(match_id)
+
+            if channel_layer is not None:
+                await channel_layer.group_send(
+                    f"match_{match_id}",
+                    {
+                        "type": "user.forfeit",
+                        "user_id": user.pk,
+                    },
+                )
+                await broadcast_matches_updated()
+
+            return
+
         result = game.make_move(sign, target_board, target_cell)
 
         if result in ("winner_X", "winner_O", "draw"):
             await set_game_result(result, match_id)
             await delete_match_state(match_id)
+            await delete_turn_deadline(match_id)
+            new_deadline = None
         else:
             await save_match_state(match_id, game)
+            new_deadline = await set_turn_deadline(match_id)
+            asyncio_lib.create_task(
+                start_deadline_countdown(match_id, new_deadline)
+            )
 
         if channel_layer is not None:
             await channel_layer.group_send(
@@ -85,6 +175,7 @@ async def perform_make_move(
                     "type": "move.result",
                     "result": result,
                     "board_state": game.to_dict(),
+                    "turn_deadline": new_deadline,
                 }
             )
 
@@ -102,6 +193,7 @@ async def perform_forfeit(match_id: int, user: User) -> None:
     async with lock:
         if await set_forfeit_result(match_id, user):
             await delete_match_state(match_id)
+            await delete_turn_deadline(match_id)
             if channel_layer is None:
                 return
             await channel_layer.group_send(
@@ -183,3 +275,12 @@ def abort_match(match_id: int) -> None:
             Match.GameStatus.WAITING,
         ]
     ).update(status=Match.GameStatus.ABORTED)
+
+
+@database_sync_to_async
+def get_current_player(sign: str, match_id: int) -> User:
+    match = Match.objects.get(id=match_id)
+    if sign == "X":
+        return match.player_x
+    else:
+        return match.player_o

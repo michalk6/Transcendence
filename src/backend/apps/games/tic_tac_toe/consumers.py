@@ -2,7 +2,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth import get_user_model
 from apps.games.tic_tac_toe.models import Match
 from channels.db import database_sync_to_async
-from apps.games.tic_tac_toe.services import GAME_LOBBY_GROUP, broadcast_matches_updated, \
+from apps.games.tic_tac_toe.services import GAME_LOBBY_GROUP, broadcast_matches_updated, get_turn_deadline, \
     join_match, perform_make_move, read_match_state, abort_match, perform_forfeit
 from apps.games.tic_tac_toe.game import InvalidMove
 from redis.exceptions import LockError
@@ -39,7 +39,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
         await self.send_json({
             "type": "game_state",
-            "board_state": game.to_dict()
+            "board_state": game.to_dict(),
+            "turn_deadline": await get_turn_deadline(match_id),
         })
 
     async def disconnect(self, code: int) -> None:
@@ -148,6 +149,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             "type": "move_result",
             "detail": event["result"],
             "board_state": event["board_state"],
+            "turn_deadline": event["turn_deadline"],
         })
 
         if event["result"] in ("winner_X", "winner_O", "draw"):

@@ -92,7 +92,7 @@ class Game:
         if target_board < 0 or 8 < target_board:
             raise InvalidMove("Board index out of range")
         if sign != self.current_player:
-            raise InvalidMove("Not this player turn")
+            raise InvalidMove("Not your turn")
 
         self.board[target_board].make_move(sign, target_cell)
         self.switch_turn()
