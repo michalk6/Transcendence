@@ -82,13 +82,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def send_status(self, event):
         await self.send_json({
+            "type": "user_status",
             "user_id": event.get("user_id"),
             "status": event.get("status"),
         })
 
     async def receive_json(self, content, **kwargs) -> None:
         if not isinstance(content, dict):
-            await self.send_json({"action": "error", "detail": "Invalid JSON format."})
+            await self.send_json({
+                "type": "error",
+                "detail": "Invalid JSON format.",
+            })
             return
 
         action = content.get("action")
@@ -98,18 +102,22 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             message = content.get("message")
             if not isinstance(message, dict):
                 await self.send_json({
-                    "action": "error",
+                    "type": "error",
                     "detail": "Message must be a JSON object.",
                 })
                 return
             await self.handle_send_message(message)
         else:
-            await self.send_json({"action": "error", "detail": "Unknown action."})
+            await self.send_json({
+                "type": "error",
+                "detail": "Unknown action.",
+            })
 
     async def handle_get_online_users(self):
         online_user_ids = await get_online_user_ids()
         online_users = await self.retrieve_users_from_db(online_user_ids)
         await self.send_json({
+            "type": "online_users",
             "online_users": online_users,
         })
 
@@ -119,7 +127,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             member_ids = message_dict.pop("member_ids", [])
         except ValidationError as err:
             await self.send_json({
-                "action": "error",
+                "type": "error",
                 "detail": str(err.detail),
             })
             return
@@ -136,7 +144,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def message_created(self, event):
         message = event.get("message", {})
-        await self.send_json(message, close=False)
+        await self.send_json({
+            "type": "message_created",
+            "message": message,
+        })
 
     async def presence_heartbeat(self, user_id):
         while True:

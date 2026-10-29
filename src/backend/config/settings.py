@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.relations',
     'apps.chat',
+    'apps.games.tic_tac_toe',
 ]
 
 MIDDLEWARE = [
