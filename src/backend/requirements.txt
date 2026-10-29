@@ -3,5 +3,8 @@ djangorestframework
 djangorestframework-simplejwt
 environs
 drf-spectacular
-psycopg2-binary
+channels
 daphne
+redis
+channels-redis
+psycopg2-binary
