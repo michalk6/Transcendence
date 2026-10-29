@@ -1,0 +1,67 @@
+services:
+    # database
+    db:
+        image: postgres:16-alpine
+        container_name: db
+        env_file: .env
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - transcendence
+        # backend waits until postgres really accepts connections
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: always
+
+    # redis, will be used by django channels (websockets)
+    redis:
+        image: redis:7-alpine
+        container_name: redis
+        networks:
+            - transcendence
+        restart: always
+
+    # django api
+    backend:
+        build:
+            context: .
+            dockerfile: docker/backend/Dockerfile
+        container_name: backend
+        image: transcendence-backend
+        env_file: .env
+        volumes:
+            - static_data:/app/staticfiles
+        networks:
+            - transcendence
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: always
+
+    # nginx: https entry point, serves react build and passes api to backend
+    nginx:
+        build:
+            context: .
+            dockerfile: docker/nginx/Dockerfile
+        container_name: nginx
+        image: transcendence-nginx
+        ports:
+            - "${HTTPS_PORT}:443"
+        volumes:
+            - static_data:/var/www/static:ro
+        networks:
+            - transcendence
+        depends_on:
+            - backend
+        restart: always
+
+volumes:
+    postgres_data:
+    static_data:
+
+networks:
+    transcendence:
+        driver: bridge
