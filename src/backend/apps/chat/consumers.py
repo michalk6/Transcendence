@@ -10,6 +10,7 @@ from apps.users.queries import annotate_and_sort_by_friendship_status
 from apps.users.serializers.user_serializers import PublicUserSerializer
 import asyncio
 from typing import TYPE_CHECKING, cast
+from apps.chat.services.general_chat_services import save_general_message, get_general_message_list
 
 if TYPE_CHECKING:
     from apps.users.models import User
@@ -182,3 +183,80 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         queryset = annotate_and_sort_by_friendship_status(queryset, user)
         serializer = PublicUserSerializer(instance=queryset, many=True)
         return serializer.data
+
+
+class GeneralChatConsumer(AsyncJsonWebsocketConsumer):
+    GENERAL_CHAT_GROUP = "general_chat"
+
+    async def connect(self) -> None:
+        user = self.scope.get("user")
+        if user is None or not user.is_authenticated:
+            await self.close(code=4401)
+            return
+
+        await self.channel_layer.group_add(
+            self.GENERAL_CHAT_GROUP,
+            self.channel_name,
+        )
+        await self.accept()
+
+        messages = await get_general_message_list()
+        await self.send_json({
+            "type": "general_message_list",
+            "message_list": messages,
+        })
+
+    async def receive_json(self, content, **kwargs) -> None:
+        if not isinstance(content, dict):
+            await self.send_json({
+                "type": "error",
+                "detail": "Invalid JSON format.",
+            })
+            return
+
+        action = content.get("action")
+        if action == "send_message":
+            content = content.get("content")
+            if (
+                not isinstance(content, str)
+                or not content.strip()
+                or len(content) > 2000
+            ):
+                await self.send_json({
+                    "type": "error",
+                    "detail": "Invalid message content.",
+                })
+                return
+            await self.handle_send_message(content)
+        else:
+            await self.send_json({
+                "type": "error",
+                "detail": "Unknown action.",
+            })
+
+    async def handle_send_message(self, content: str) -> None:
+        user = self.scope.get("user")
+        if user is None or not user.is_authenticated:
+            return
+        user = cast(User, user)
+        message = await save_general_message(user, content)
+        await self.channel_layer.group_send(
+            self.GENERAL_CHAT_GROUP,
+            {
+                "type": "send.general.message",
+                "message": message,
+            }
+        )
+
+    async def send_general_message(self, event):
+        message = event.get("message", {})
+        await self.send_json({
+            "type": "general_message",
+            "message": message,
+        })
+
+    async def disconnect(self, code: int) -> None:
+        await self.channel_layer.group_discard(
+            self.GENERAL_CHAT_GROUP,
+            self.channel_name,
+        )

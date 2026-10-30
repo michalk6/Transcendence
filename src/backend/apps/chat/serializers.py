@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from apps.chat.models import ChatRoom, Message
 from django.contrib.auth import get_user_model
 from typing import TYPE_CHECKING, Any, cast
-from apps.chat.services import filter_blocklisted_members, create_private_chat_room
+from backend.apps.chat.services.chat_room_services import filter_blocklisted_members, create_private_chat_room
 from apps.chat.serializers_utils import build_warnings
 
 if TYPE_CHECKING:
