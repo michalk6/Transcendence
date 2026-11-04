@@ -385,7 +385,7 @@ export default function FriendsTab({ username, onChanged }) {
                 key={request.id}
                 className="d-flex justify-content-between align-items-center"
               >
-                <span>User #{request.sender}</span>
+                <span>{request.sender.username}</span>
                 <span className="d-flex gap-2">
                   <Button
                     size="sm"
