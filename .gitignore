@@ -229,3 +229,6 @@ pyproject.toml
 
 # django collectstatic output
 src/backend/staticfiles/
+
+# uploaded avatars (local runs)
+src/backend/media/

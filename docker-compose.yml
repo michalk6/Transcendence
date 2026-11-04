@@ -34,6 +34,8 @@ services:
         env_file: .env
         volumes:
             - static_data:/app/staticfiles
+            # uploaded avatars, without it they are lost when the container is recreated
+            - media_data:/app/media
         networks:
             - transcendence
         depends_on:
@@ -61,6 +63,7 @@ services:
 volumes:
     postgres_data:
     static_data:
+    media_data:
 
 networks:
     transcendence:
