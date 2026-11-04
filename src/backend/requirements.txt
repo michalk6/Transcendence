@@ -5,3 +5,6 @@ environs
 drf-spectacular
 channels
 daphne
+redis
+channels-redis
+psycopg2-binary
