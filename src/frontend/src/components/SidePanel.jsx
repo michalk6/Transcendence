@@ -5,6 +5,7 @@ import Tabs from 'react-bootstrap/Tabs'
 import Button from 'react-bootstrap/Button'
 import FriendsTab from './FriendsTab'
 import BlocklistTab from './BlocklistTab'
+import GeneralChat from './GeneralChat'
 
 export default function SidePanel({ show, onHide, user, onLogout }) {
   const [reloadKey, setReloadKey] = useState(0)
@@ -39,7 +40,7 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
             </Tab>
 
             <Tab eventKey="chat" title="Chat">
-              <p className="text-body-secondary">Chat is coming soon.</p>
+              <GeneralChat />
             </Tab>
           </Tabs>
         )}
