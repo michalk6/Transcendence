@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Offcanvas from 'react-bootstrap/Offcanvas'
 import Tab from 'react-bootstrap/Tab'
 import Nav from 'react-bootstrap/Nav'
@@ -14,14 +14,44 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('profile')
   const [chatPartner, setChatPartner] = useState(null)
   const [openGroupRoom, setOpenGroupRoom] = useState(null)
+  const [chatSocket, setChatSocket] = useState(null)
+  const [lastMessage, setLastMessage] = useState(null)
+  const [lastError, setLastError] = useState(null)
   const bump = () => setReloadKey(reloadKey + 1)
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const socket = new WebSocket(protocol + '//' + window.location.host + '/ws/chat/')
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      if (data.type === 'message_created') {
+        setLastMessage(data.message)
+      } else if (data.type === 'error') {
+        setLastError(data.detail)
+      }
+    }
+
+    socket.onopen = () => {
+      setChatSocket(socket)
+    }
+
+    return () => {
+      socket.close()
+      setChatSocket(null)
+    }
+  }, [user])
 
   function handleMessage(friend) {
     setChatPartner(friend)
   }
 
   function handleOpenGroup(room) {
-    setOpenGroupRoom({ id: room.id, name: room.name })
+    setOpenGroupRoom({ id: room.id, name: room.name, members: room.members })
     setActiveTab('group')
   }
 
@@ -32,6 +62,9 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
         otherUserId={chatPartner.id}
         otherUsername={chatPartner.username}
         onBack={() => setChatPartner(null)}
+        socket={chatSocket}
+        lastMessage={lastMessage}
+        lastError={lastError}
       />
     )
   } else if (user) {
@@ -51,7 +84,12 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
       <GroupChat
         roomId={openGroupRoom.id}
         roomName={openGroupRoom.name}
+        memberIds={openGroupRoom.members}
         onBack={() => setOpenGroupRoom(null)}
+        socket={chatSocket}
+        lastMessage={lastMessage}
+        lastError={lastError}
+        username={user.username}
       />
     )
   } else if (user) {

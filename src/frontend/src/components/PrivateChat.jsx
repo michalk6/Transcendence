@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import Alert from 'react-bootstrap/Alert'
-import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
 
-export default function PrivateChat({ otherUserId, otherUsername, onBack }) {
+export default function PrivateChat({ otherUserId, otherUsername, onBack, socket, lastMessage, lastError }) {
   const [roomId, setRoomId] = useState(null)
   const [messages, setMessages] = useState([])
+  const [pendingNewRoom, setPendingNewRoom] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef(null)
 
@@ -41,36 +41,56 @@ export default function PrivateChat({ otherUserId, otherUsername, onBack }) {
     fetchRoom()
   }, [otherUserId])
 
-  async function handleSend(event) {
+  useEffect(() => {
+    if (!lastMessage) {
+      return
+    }
+
+    if (roomId) {
+      if (lastMessage.chat_room === roomId) {
+        setMessages((prev) => [...prev, lastMessage])
+      }
+      return
+    }
+
+    if (lastMessage.sender === otherUserId || pendingNewRoom) {
+      setRoomId(lastMessage.chat_room)
+      setMessages((prev) => [...prev, lastMessage])
+      setPendingNewRoom(false)
+    }
+  }, [lastMessage])
+
+  useEffect(() => {
+    if (lastError) {
+      setError(lastError)
+    }
+  }, [lastError])
+
+  function handleSend(event) {
     event.preventDefault()
     setError('')
+
+    if (!socket) {
+      setError('Not connected yet, try again in a moment.')
+      return
+    }
+
     const content = inputRef.current.value
 
     if (content.trim() === '') {
       return
     }
 
-    let body = { receiver: otherUserId, content }
+    let message = { content }
     if (roomId) {
-      body = { chat_room: roomId, content }
+      message.chat_room = roomId
+    } else {
+      message.receiver = otherUserId
+      setPendingNewRoom(true)
     }
 
-    const response = await apiFetch('/api/chat/message/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken(),
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      setError('Could not send message.')
-      return
-    }
-
+    socket.send(JSON.stringify({ action: 'send_message', message }))
     inputRef.current.value = ''
-    await fetchRoom()
   }
 
   let errorAlert = null
