@@ -4,7 +4,7 @@ import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 import Alert from 'react-bootstrap/Alert'
 import Pagination from 'react-bootstrap/Pagination'
-import Modal from 'react-bootstrap/Modal'
+import ConfirmModal from './ConfirmModal'
 import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
 import BlocklistTab from './BlocklistTab'
@@ -552,49 +552,35 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
         ))}
       </ListGroup>
 
-      <Modal show={removeTarget !== null} onHide={() => setRemoveTarget(null)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Remove friend</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Remove <strong>{removeTarget && removeTarget.username}</strong> from your friends?
-          </p>
-          <Form.Check
-            type="checkbox"
-            label="Also block this user"
-            checked={alsoBlock}
-            onChange={(event) => setAlsoBlock(event.target.checked)}
-          />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={() => setRemoveTarget(null)}>
-            Cancel
-          </Button>
-          <Button variant="outline-danger" onClick={handleConfirmRemove}>
-            Remove
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <ConfirmModal
+        show={removeTarget !== null}
+        title="Remove friend"
+        body={
+          <>
+            <p>
+              Remove <strong>{removeTarget && removeTarget.username}</strong> from your friends?
+            </p>
+            <Form.Check
+              type="checkbox"
+              label="Also block this user"
+              checked={alsoBlock}
+              onChange={(event) => setAlsoBlock(event.target.checked)}
+            />
+          </>
+        }
+        confirmLabel="Remove"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveTarget(null)}
+      />
 
-      <Modal show={blockTarget !== null} onHide={() => setBlockTarget(null)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Block user</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Block <strong>{blockTarget && blockTarget.username}</strong>?
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={() => setBlockTarget(null)}>
-            Cancel
-          </Button>
-          <Button variant="outline-danger" onClick={handleConfirmBlock}>
-            Block
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <ConfirmModal
+        show={blockTarget !== null}
+        title="Block user"
+        body={<p>Block <strong>{blockTarget && blockTarget.username}</strong>?</p>}
+        confirmLabel="Block"
+        onConfirm={handleConfirmBlock}
+        onCancel={() => setBlockTarget(null)}
+      />
     </>
   )
 }
