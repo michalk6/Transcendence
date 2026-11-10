@@ -5,11 +5,13 @@ import Alert from 'react-bootstrap/Alert'
 import Pagination from 'react-bootstrap/Pagination'
 import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
+import SearchBox from './SearchBox'
 
 const BLOCKED_PAGE_SIZE = 10
 
 export default function BlocklistTab({ reloadKey }) {
   const [blocked, setBlocked] = useState([])
+  const [blockedTerm, setBlockedTerm] = useState('')
   const [blockedPage, setBlockedPage] = useState(1)
   const [blockedCount, setBlockedCount] = useState(0)
   const [error, setError] = useState('')
@@ -18,6 +20,7 @@ export default function BlocklistTab({ reloadKey }) {
 
   async function fetchBlockedPage(pageNumber) {
     const params = new URLSearchParams({
+      search: blockedTerm,
       page_size: BLOCKED_PAGE_SIZE,
       page: pageNumber,
     })
@@ -36,6 +39,11 @@ export default function BlocklistTab({ reloadKey }) {
   useEffect(() => {
     fetchBlockedPage(1)
   }, [reloadKey])
+
+  async function handleBlockedSearch(event) {
+    event.preventDefault()
+    await fetchBlockedPage(1)
+  }
 
   async function handleUnblock(userId) {
     setError('')
@@ -82,6 +90,13 @@ export default function BlocklistTab({ reloadKey }) {
       {errorAlert}
 
       <div className="text-body-secondary mb-1">Blocked ({blockedCount})</div>
+
+      <SearchBox
+        value={blockedTerm}
+        onChange={setBlockedTerm}
+        onSubmit={handleBlockedSearch}
+        placeholder="Search blocked users…"
+      />
 
       {blockedPagination}
 

@@ -4,14 +4,22 @@ import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 import Alert from 'react-bootstrap/Alert'
 import Pagination from 'react-bootstrap/Pagination'
+import Modal from 'react-bootstrap/Modal'
 import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
+import BlocklistTab from './BlocklistTab'
+import SearchBox from './SearchBox'
 
 const RESULTS_PAGE_SIZE = 10
 const FRIENDS_PAGE_SIZE = 10
 
-export default function FriendsTab({ username, onChanged }) {
+export default function FriendsTab({ username, onChanged, onMessage, reloadKey }) {
+  const [showBlocked, setShowBlocked] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState(null)
+  const [alsoBlock, setAlsoBlock] = useState(false)
+  const [blockTarget, setBlockTarget] = useState(null)
   const [friends, setFriends] = useState([])
+  const [friendsTerm, setFriendsTerm] = useState('')
   const [friendsPage, setFriendsPage] = useState(1)
   const [friendsCount, setFriendsCount] = useState(0)
   const [receivedRequests, setReceivedRequests] = useState([])
@@ -42,6 +50,7 @@ export default function FriendsTab({ username, onChanged }) {
 
   async function fetchFriendsPage(pageNumber) {
     const params = new URLSearchParams({
+      search: friendsTerm,
       page_size: FRIENDS_PAGE_SIZE,
       page: pageNumber,
     })
@@ -150,10 +159,7 @@ export default function FriendsTab({ username, onChanged }) {
     setMessage('Friend request cancelled.')
   }
 
-  async function handleRemoveFriend(userId) {
-    setMessage('')
-    setError('')
-
+  async function removeFriend(userId) {
     const response = await apiFetch('/api/relations/friends/' + userId + '/remove/', {
       method: 'POST',
       headers: { 'X-CSRFToken': getCsrfToken() },
@@ -162,11 +168,55 @@ export default function FriendsTab({ username, onChanged }) {
     if (!response.ok) {
       const data = await response.json()
       setError(extractErrorMessage(data, 'Could not remove friend.'))
-      return
+      return false
     }
 
     await fetchFriendsPage(friendsPage)
-    setMessage('Friend removed.')
+    return true
+  }
+
+  async function blockUser(userId) {
+    const response = await apiFetch('/api/relations/blocklist/' + userId + '/add/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken() },
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      setError(extractErrorMessage(data, 'Could not block user.'))
+      return false
+    }
+
+    if (onChanged) {
+      onChanged()
+    }
+    return true
+  }
+
+  function handleOpenRemoveModal(friend) {
+    setRemoveTarget(friend)
+    setAlsoBlock(false)
+  }
+
+  async function handleConfirmRemove() {
+    setMessage('')
+    setError('')
+
+    const removed = await removeFriend(removeTarget.id)
+    if (!removed) {
+      return
+    }
+
+    if (alsoBlock) {
+      const blocked = await blockUser(removeTarget.id)
+      if (blocked) {
+        setMessage('Friend removed and blocked.')
+      }
+    } else {
+      setMessage('Friend removed.')
+    }
+
+    setRemoveTarget(null)
   }
 
   async function fetchResultsPage(pageNumber) {
@@ -192,6 +242,11 @@ export default function FriendsTab({ username, onChanged }) {
     setMessage('')
     setError('')
     await fetchResultsPage(1)
+  }
+
+  async function handleFriendsSearch(event) {
+    event.preventDefault()
+    await fetchFriendsPage(1)
   }
 
   async function handleSendRequest(userId) {
@@ -221,27 +276,43 @@ export default function FriendsTab({ username, onChanged }) {
     setMessage('Friend request sent.')
   }
 
-  async function handleBlock(userId) {
+  async function handleUnblock(userId) {
     setMessage('')
     setError('')
 
-    const response = await apiFetch('/api/relations/blocklist/' + userId + '/add/', {
+    const response = await apiFetch('/api/relations/blocklist/' + userId + '/remove/', {
       method: 'POST',
       headers: { 'X-CSRFToken': getCsrfToken() },
     })
 
     if (!response.ok) {
-      const data = await response.json()
-      setError(extractErrorMessage(data, 'Could not block user.'))
+      setError('Could not unblock user.')
       return
     }
 
-    setResults((prev) => prev.filter((user) => user.id !== userId))
-    setMessage('User blocked.')
+    setResults((prev) =>
+      prev.map((user) =>
+        user.id === userId ? { ...user, friendship_status: 'none' } : user
+      )
+    )
+    setMessage('User unblocked.')
 
     if (onChanged) {
       onChanged()
     }
+  }
+
+  async function handleConfirmBlock() {
+    setMessage('')
+    setError('')
+
+    const blocked = await blockUser(blockTarget.id)
+    if (blocked) {
+      setResults((prev) => prev.filter((user) => user.id !== blockTarget.id))
+      setMessage('User blocked.')
+    }
+
+    setBlockTarget(null)
   }
 
   function renderResultActions(user) {
@@ -252,7 +323,11 @@ export default function FriendsTab({ username, onChanged }) {
       return <Button size="sm" variant="outline-secondary" disabled>Friends</Button>
     }
     if (user.friendship_status === 'blocked') {
-      return <Button size="sm" variant="outline-secondary" disabled>Blocked</Button>
+      return (
+        <Button size="sm" variant="outline-secondary" onClick={() => handleUnblock(user.id)}>
+          Unblock
+        </Button>
+      )
     }
 
     let addOrStatusButton = (
@@ -284,7 +359,7 @@ export default function FriendsTab({ username, onChanged }) {
     return (
       <span className="d-flex gap-2">
         {addOrStatusButton}
-        <Button size="sm" variant="outline-danger" onClick={() => handleBlock(user.id)}>
+        <Button size="sm" variant="outline-danger" onClick={() => setBlockTarget(user)}>
           Block
         </Button>
       </span>
@@ -339,22 +414,48 @@ export default function FriendsTab({ username, onChanged }) {
     )
   }
 
+  let toggleBlockedLabel = 'Blocked list'
+  if (showBlocked) {
+    toggleBlockedLabel = 'Back to friends'
+  }
+
+  if (showBlocked) {
+    return (
+      <>
+        <Button
+          variant="outline-secondary"
+          size="sm"
+          className="mb-2"
+          onClick={() => setShowBlocked(false)}
+        >
+          {toggleBlockedLabel}
+        </Button>
+
+        <BlocklistTab reloadKey={reloadKey} />
+      </>
+    )
+  }
+
   return (
     <>
       {messageAlert}
       {errorAlert}
 
-      <Form onSubmit={handleSearch} className="d-flex gap-2 mb-2">
-        <Form.Control
-          size="sm"
-          placeholder="Search for a user…"
-          value={term}
-          onChange={(event) => setTerm(event.target.value)}
-        />
-        <Button size="sm" type="submit" variant="outline-secondary">
-          Search
-        </Button>
-      </Form>
+      <Button
+        variant="outline-secondary"
+        size="sm"
+        className="mb-2"
+        onClick={() => setShowBlocked(true)}
+      >
+        {toggleBlockedLabel}
+      </Button>
+
+      <SearchBox
+        value={term}
+        onChange={setTerm}
+        onSubmit={handleSearch}
+        placeholder="Search for a user…"
+      />
 
       {results.length > 0 && (
         <>
@@ -410,12 +511,19 @@ export default function FriendsTab({ username, onChanged }) {
 
       <div className="text-body-secondary mb-1">Your friends ({friendsCount})</div>
 
+      <SearchBox
+        value={friendsTerm}
+        onChange={setFriendsTerm}
+        onSubmit={handleFriendsSearch}
+        placeholder="Search your friends…"
+      />
+
       {friendsPagination}
 
       <ListGroup>
         {friends.length === 0 && (
           <ListGroup.Item className="text-body-secondary">
-            No friends yet.
+            No friends found.
           </ListGroup.Item>
         )}
         {friends.map((friend) => (
@@ -424,16 +532,69 @@ export default function FriendsTab({ username, onChanged }) {
             className="d-flex justify-content-between align-items-center"
           >
             <span>{friend.username}</span>
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              onClick={() => handleRemoveFriend(friend.id)}
-            >
-              Remove
-            </Button>
+            <span className="d-flex gap-2">
+              <Button
+                size="sm"
+                className="btn-register"
+                onClick={() => onMessage(friend)}
+              >
+                Message
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                onClick={() => handleOpenRemoveModal(friend)}
+              >
+                Remove
+              </Button>
+            </span>
           </ListGroup.Item>
         ))}
       </ListGroup>
+
+      <Modal show={removeTarget !== null} onHide={() => setRemoveTarget(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Remove friend</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Remove <strong>{removeTarget && removeTarget.username}</strong> from your friends?
+          </p>
+          <Form.Check
+            type="checkbox"
+            label="Also block this user"
+            checked={alsoBlock}
+            onChange={(event) => setAlsoBlock(event.target.checked)}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setRemoveTarget(null)}>
+            Cancel
+          </Button>
+          <Button variant="outline-danger" onClick={handleConfirmRemove}>
+            Remove
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={blockTarget !== null} onHide={() => setBlockTarget(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Block user</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Block <strong>{blockTarget && blockTarget.username}</strong>?
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setBlockTarget(null)}>
+            Cancel
+          </Button>
+          <Button variant="outline-danger" onClick={handleConfirmBlock}>
+            Block
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   )
 }
