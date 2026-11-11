@@ -32,11 +32,20 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = cast(User, self.request.user)
-        return (
+        queryset = (
             user.chat_rooms
             .prefetch_related("members")
             .select_related("last_message__sender")
         )
+
+        room_type = self.request.query_params.get("room_type")
+        if room_type:
+            room_type = room_type.upper()
+            if room_type not in ChatRoom.RoomType.values:
+                raise ValidationError({"room_type": "Use PRIVATE or GROUP."})
+            queryset = queryset.filter(room_type=room_type)
+
+        return queryset
 
 
 class MessageListView(generics.ListAPIView):

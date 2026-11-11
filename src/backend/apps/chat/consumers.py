@@ -170,6 +170,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         return {
             "id": str(saved_message.id),
             "sender": saved_message.sender_id,
+            "sender_username": saved_message.sender.username,
             "content": saved_message.content,
             "chat_room": str(saved_message.chat_room_id),
             "created_at": saved_message.created_at.isoformat(),

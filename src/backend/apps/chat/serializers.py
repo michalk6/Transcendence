@@ -57,14 +57,22 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.SerializerMethodField()
+
     class Meta:
         model = Message
         fields = [
             "id",
             "sender",
+            "sender_username",
             "content",
             "created_at",
         ]
+
+    def get_sender_username(self, instance: Message) -> str | None:
+        if not instance.sender:
+            return None
+        return instance.sender.username
 
 
 class ChatRoomCreateSerializer(serializers.ModelSerializer):
