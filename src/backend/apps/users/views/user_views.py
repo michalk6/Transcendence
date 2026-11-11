@@ -1,7 +1,9 @@
+import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from apps.users.serializers.user_serializers import (
@@ -71,6 +73,20 @@ class SearchUsersView(generics.ListAPIView):
         return queryset
 
 
+def get_chat_room_to_exclude(request):
+    room_id = request.query_params.get("exclude_chat_room")
+    if not room_id or not request.user.is_authenticated:
+        return None
+    try:
+        uuid.UUID(room_id)
+    except ValueError:
+        raise ValidationError({"exclude_chat_room": "Invalid chat room id."})
+    chat_room = request.user.chat_rooms.filter(pk=room_id).first()
+    if chat_room is None:
+        raise ValidationError({"exclude_chat_room": "Chat room not found."})
+    return chat_room
+
+
 @friend_list_doc
 class FriendListView(generics.ListAPIView):
     serializer_class = PublicUserSerializer
@@ -83,6 +99,10 @@ class FriendListView(generics.ListAPIView):
         user = cast(User | AnonymousUser, self.request.user)
 
         queryset = inspected_user.friends.all()
+
+        chat_room = get_chat_room_to_exclude(self.request)
+        if chat_room:
+            queryset = queryset.exclude(chat_rooms=chat_room)
 
         mutuality = self.request.query_params.get("mutuality")
         if mutuality == "mutual":
