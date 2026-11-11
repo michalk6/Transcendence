@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import Offcanvas from 'react-bootstrap/Offcanvas'
 import Tab from 'react-bootstrap/Tab'
 import Nav from 'react-bootstrap/Nav'
-import Button from 'react-bootstrap/Button'
+import ProfileTab from './ProfileTab'
 import FriendsTab from './FriendsTab'
 import GeneralChat from './GeneralChat'
 import GroupRoomList from './GroupRoomList'
 import PrivateChat from './PrivateChat'
 import GroupChat from './GroupChat'
 
-export default function SidePanel({ show, onHide, user, onLogout }) {
+export default function SidePanel({ show, onHide, user, onLogout, onUserUpdated }) {
   const [reloadKey, setReloadKey] = useState(0)
   const [activeTab, setActiveTab] = useState('profile')
   const [chatPartner, setChatPartner] = useState(null)
@@ -17,6 +17,7 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
   const [chatSocket, setChatSocket] = useState(null)
   const [lastMessage, setLastMessage] = useState(null)
   const [lastError, setLastError] = useState(null)
+  const [onlineUserIds, setOnlineUserIds] = useState(new Set())
   const bump = () => setReloadKey(reloadKey + 1)
 
   useEffect(() => {
@@ -33,11 +34,24 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
         setLastMessage(data.message)
       } else if (data.type === 'error') {
         setLastError(data.detail)
+      } else if (data.type === 'online_users') {
+        setOnlineUserIds(new Set(data.online_users.map((onlineUser) => onlineUser.id)))
+      } else if (data.type === 'user_status') {
+        setOnlineUserIds((prev) => {
+          const next = new Set(prev)
+          if (data.status === 'online') {
+            next.add(data.user_id)
+          } else {
+            next.delete(data.user_id)
+          }
+          return next
+        })
       }
     }
 
     socket.onopen = () => {
       setChatSocket(socket)
+      socket.send(JSON.stringify({ action: 'get_online_users' }))
     }
 
     return () => {
@@ -51,7 +65,7 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
   }
 
   function handleOpenGroup(room) {
-    setOpenGroupRoom({ id: room.id, name: room.name, members: room.members })
+    setOpenGroupRoom({ id: room.id, name: room.name })
     setActiveTab('group')
   }
 
@@ -74,6 +88,7 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
         onChanged={bump}
         onMessage={handleMessage}
         reloadKey={reloadKey}
+        onlineUserIds={onlineUserIds}
       />
     )
   }
@@ -84,7 +99,6 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
       <GroupChat
         roomId={openGroupRoom.id}
         roomName={openGroupRoom.name}
-        memberIds={openGroupRoom.members}
         onBack={() => setOpenGroupRoom(null)}
         socket={chatSocket}
         lastMessage={lastMessage}
@@ -130,12 +144,7 @@ export default function SidePanel({ show, onHide, user, onLogout }) {
 
             <Tab.Content>
               <Tab.Pane eventKey="profile">
-                <p className="mb-1">
-                  Username: <span className="accent-neon">{user.username}</span>
-                </p>
-                <Button variant="outline-secondary" className="mt-2" onClick={() => onLogout?.()}>
-                  Log out
-                </Button>
+                <ProfileTab user={user} onLogout={onLogout} onUserUpdated={onUserUpdated} />
               </Tab.Pane>
 
               <Tab.Pane eventKey="friends">

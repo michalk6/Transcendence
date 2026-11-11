@@ -64,7 +64,7 @@ export function App() {
     <Routes>
       <Route
         path="/"
-        element={<Home onNavigate={navigate} user={user} onLogout={handleLogout} />}
+        element={<Home onNavigate={navigate} user={user} onLogout={handleLogout} onUserUpdated={setUser} />}
       />
       <Route
         path="/login"
@@ -78,9 +78,9 @@ export function App() {
         path="/game"
         element={
           user ? (
-            <Game onNavigate={navigate} user={user} onLogout={handleLogout} />
+            <Game onNavigate={navigate} user={user} onLogout={handleLogout} onUserUpdated={setUser} />
           ) : (
-            <Navigate to="/login" replace />
+            <Navigate to="/" replace />
           )
         }
       />

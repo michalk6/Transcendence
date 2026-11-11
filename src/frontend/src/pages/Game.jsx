@@ -7,14 +7,20 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SidePanel from '../components/SidePanel'
 
-export default function Game({ onNavigate, user, onLogout }) {
+export default function Game({ onNavigate, user, onLogout, onUserUpdated }) {
   const [panelOpen, setPanelOpen] = useState(false)
 
   return (
     <>
       <Header onNavigate={onNavigate} user={user} onOpenPanel={() => setPanelOpen(true)} />
 
-      <SidePanel show={panelOpen} onHide={() => setPanelOpen(false)} user={user} onLogout={onLogout} />
+      <SidePanel
+        show={panelOpen}
+        onHide={() => setPanelOpen(false)}
+        user={user}
+        onLogout={onLogout}
+        onUserUpdated={onUserUpdated}
+      />
 
       <Container className="py-4 d-flex flex-column align-items-center">
         <Button

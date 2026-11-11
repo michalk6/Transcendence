@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -9,14 +9,26 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SidePanel from '../components/SidePanel'
 
-export default function Home({ onNavigate, user, onLogout }) {
+export default function Home({ onNavigate, user, onLogout, onUserUpdated }) {
   const [panelOpen, setPanelOpen] = useState(false)
+
+  useEffect(() => {
+    if (!user) {
+      setPanelOpen(false)
+    }
+  }, [user])
 
   return (
     <>
       <Header onNavigate={onNavigate} user={user} onOpenPanel={() => setPanelOpen(true)}/>
 
-      <SidePanel show={panelOpen} onHide={() => setPanelOpen(false)} user={user} onLogout={onLogout}/>
+      <SidePanel
+        show={panelOpen}
+        onHide={() => setPanelOpen(false)}
+        user={user}
+        onLogout={onLogout}
+        onUserUpdated={onUserUpdated}
+      />
 
       <Container fluid className="py-4">
         <Row className="g-4">
