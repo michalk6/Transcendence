@@ -7,11 +7,11 @@ import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
 import SearchBox from './SearchBox'
 import ConfirmModal from './ConfirmModal'
+import { getSenderColor } from '../senderColor'
 
 const FRIENDS_PAGE_SIZE = 10
 
-export default function GroupChat({ roomId, roomName, memberIds, onBack, socket, lastMessage, lastError, username }) {
-  const [currentMemberIds, setCurrentMemberIds] = useState(memberIds)
+export default function GroupChat({ roomId, roomName, onBack, socket, lastMessage, lastError, username }) {
   const [messages, setMessages] = useState([])
   const [displayName, setDisplayName] = useState(roomName)
   const [error, setError] = useState('')
@@ -102,6 +102,7 @@ export default function GroupChat({ roomId, roomName, memberIds, onBack, socket,
   async function fetchFriends(pageNumber) {
     const params = new URLSearchParams({
       search: friendsTerm,
+      exclude_chat_room: roomId,
       page_size: FRIENDS_PAGE_SIZE,
       page: pageNumber,
     })
@@ -161,8 +162,6 @@ export default function GroupChat({ roomId, roomName, memberIds, onBack, socket,
       setError(extractErrorMessage(data, 'Could not add members.'))
       return
     }
-
-    setCurrentMemberIds(data.members)
 
     const warningMessages = Object.values(data.warnings || {}).map((warning) => warning.message)
     if (warningMessages.length > 0) {
@@ -275,7 +274,7 @@ export default function GroupChat({ roomId, roomName, memberIds, onBack, socket,
         {friendsPagination}
 
         <Form onSubmit={handleAddMembers}>
-          {friends.filter((friend) => !currentMemberIds.includes(friend.id)).map((friend) => (
+          {friends.map((friend) => (
             <Form.Check
               key={friend.id}
               type="checkbox"
@@ -332,7 +331,7 @@ export default function GroupChat({ roomId, roomName, memberIds, onBack, socket,
       >
         {messages.map((message) => (
           <div key={message.id}>
-            <span className="accent-neon">User #{message.sender}</span>: {message.content}
+            <span style={{ color: getSenderColor(message.sender) }}>{message.sender_username}</span>: {message.content}
           </div>
         ))}
       </div>
