@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import Alert from 'react-bootstrap/Alert'
+import { getSenderColor } from '../senderColor'
 
 export default function GeneralChat() {
   const [messages, setMessages] = useState([])
@@ -62,7 +63,7 @@ export default function GeneralChat() {
       >
         {messages.map((message, index) => (
           <div key={index}>
-            <span className="accent-neon">{message.sender.username}</span>: {message.content}
+            <span style={{ color: getSenderColor(message.sender.id) }}>{message.sender.username}</span>: {message.content}
           </div>
         ))}
         <div ref={messagesEndRef} />
