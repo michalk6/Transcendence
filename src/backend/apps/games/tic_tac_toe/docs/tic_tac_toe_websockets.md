@@ -357,13 +357,19 @@ This GET endpoint is public. Creating a match with POST requires login.
 
 The board and turn deadline are stored in Redis while the match is active. After a win, draw, forfeit, or timeout, the result is saved in the database and the board and deadline are deleted from Redis. Finished and aborted matches cannot be opened again through the game WebSocket.
 
-## Match list
+## Match list and ranking
 
 ```text
 GET /api/games/tic_tac_toe_ultimate/matches/
 ```
 
 Public. Returns `waiting` matches. Every match has `player_x_username` (the creator) and `player_o_username`, so the lobby can show who the opponent is.
+
+```text
+GET /api/games/tic_tac_toe_ultimate/ranking/
+```
+
+Public. Returns users with at least one won (`finished`) match, from the most wins. Fields: `id`, `username`, `wins`. Wins are counted from finished matches, so there is no separate counter to keep in sync.
 
 ```text
 POST /api/games/tic_tac_toe_ultimate/matches/

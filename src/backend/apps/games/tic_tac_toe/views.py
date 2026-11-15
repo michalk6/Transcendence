@@ -1,13 +1,16 @@
-from django.db.models import Q
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import generics
 from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import AllowAny
-from apps.games.tic_tac_toe.serializers import MatchSerializer
+from apps.games.tic_tac_toe.serializers import MatchSerializer, RankingSerializer
 from apps.games.tic_tac_toe.models import Match
 from apps.games.tic_tac_toe.services import create_match, broadcast_matches_updated, has_open_match
 from asgiref.sync import async_to_sync
+
+User = get_user_model()
 
 
 @extend_schema_view(
@@ -50,3 +53,13 @@ class MatchListCreateView(generics.ListCreateAPIView):
         match = serializer.save(player_x=self.request.user)
         create_match(match.pk)
         async_to_sync(broadcast_matches_updated)()
+
+
+class RankingListView(generics.ListAPIView):
+    serializer_class = RankingSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        finished_wins = Q(games_won__status=Match.GameStatus.FINISHED)
+        queryset = User.objects.annotate(wins=Count("games_won", filter=finished_wins))
+        return queryset.filter(wins__gt=0).order_by("-wins", "username")
