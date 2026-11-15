@@ -20,7 +20,7 @@ Open https://localhost. Browser will warn about the certificate (self-signed), j
 | nginx | built from `docker/nginx/Dockerfile` | only entry point (port 443), https, serves built react app, passes `/api` and `/admin` to backend |
 | backend | built from `docker/backend/Dockerfile` | django on daphne (ASGI), runs `migrate` and `collectstatic` on start |
 | db | `postgres:16-alpine` | database, data in volume `postgres_data` |
-| redis | `redis:7-alpine` | for django channels (websockets), not used yet |
+| redis | `redis:7-alpine` | for django channels (websockets) and state of running games |
 
 Only nginx is open to the outside. The rest talk to each other by name (`backend`, `db`, `redis`) inside the docker network.
 
@@ -83,11 +83,11 @@ New python package: add it to `src/backend/requirements.txt` and rebuild backend
 
 ## Notes for the team
 
-**Backend (websockets):** `daphne` is already the server and redis is already running. Missing part: add channels to django, set `CHANNEL_LAYERS` with host `redis`. Nginx already passes `/ws/` to backend, so use that prefix in routing (or change it in `docker/nginx/nginx.conf`).
+**Backend (websockets):** `daphne` is the server and django reaches redis through `REDIS_URL` from `.env` (host `redis`). Without this line django looks for redis on `127.0.0.1` and websockets do not work in docker. Nginx passes `/ws/` to backend.
 
 **Frontend:** call the api with relative paths (`/api/...`), nginx handles them, so no hardcoded host or port. Vite dev server (`npm run dev`) has no proxy to the backend, so for testing with api use docker.
 
-**Running django without docker:** `SECRET_KEY` is required now. Copy `.env.example` to `.env`, remove the `POSTGRES_*` and `DB_*` lines and django uses sqlite like before.
+**Running django without docker:** `SECRET_KEY` is required now. Copy `.env.example` to `.env`, remove the `POSTGRES_*` and `DB_*` lines and django uses sqlite like before. Remove `REDIS_URL` too (django then uses redis on `127.0.0.1`).
 
 ## Problems
 
