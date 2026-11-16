@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from apps.games.tic_tac_toe.models import Match
 from channels.db import database_sync_to_async
 from apps.games.tic_tac_toe.services import GAME_LOBBY_GROUP, broadcast_matches_updated, get_turn_deadline, \
-    join_match, perform_make_move, read_match_state, abort_match, perform_forfeit
+    perform_join, perform_make_move, read_match_state, abort_match, perform_forfeit, \
+    players_to_dict, get_players, find_player_sign, check_open_match
 from apps.games.tic_tac_toe.game import InvalidMove
 from redis.exceptions import LockError
 
@@ -40,7 +41,16 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({
             "type": "game_state",
             "board_state": game.to_dict(),
+            "players": players_to_dict(match),
             "turn_deadline": await get_turn_deadline(match_id),
+        })
+
+    async def send_unauthorized(self):
+        # frontend should refresh the token (REST) and open the websocket again
+        await self.send_json({
+            "type": "error",
+            "code": "unauthorized",
+            "detail": "Access token is missing or expired.",
         })
 
     async def disconnect(self, code: int) -> None:
@@ -75,18 +85,50 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
     async def handle_join_match(self):
         user: User | None = self.scope.get("user")
         if user is None or not user.is_authenticated:
+            await self.send_unauthorized()
             return
-        if not await join_match(self.match_id, user):
+
+        sign = await find_player_sign(user, self.match_id)
+        if sign is not None:
+            await self.send_json({
+                "type": "already_in_match",
+                "sign": sign,
+            })
+            return
+
+        if await check_open_match(user):
+            await self.send_json({
+                "type": "error",
+                "code": "open_match_limit",
+                "detail": "You already have an open match.",
+            })
+            return
+
+        try:
+            result = await perform_join(self.match_id, user)
+        except LockError:
+            await self.send_json({
+                "type": "error",
+                "detail": "Could not join this match. Try again.",
+            })
+            return
+        if result is None:
             await self.send_json({
                 "type": "error",
                 "detail": "Cannot join this match.",
             })
             return
+
+        game, deadline = result
         await self.channel_layer.group_send(
             self.match_group,
             {
                 "type": "user.joined",
                 "user_id": user.pk,
+                "username": user.username,
+                "players": await get_players(self.match_id),
+                "current_player": game.current_player,
+                "turn_deadline": deadline,
             }
         )
         await broadcast_matches_updated()
@@ -95,11 +137,16 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({
             "type": "player_joined",
             "user_id": event.get("user_id"),
+            "username": event.get("username"),
+            "players": event.get("players"),
+            "current_player": event.get("current_player"),
+            "turn_deadline": event.get("turn_deadline"),
         })
 
     async def handle_make_move(self, target_board, target_cell):
         user: User | None = self.scope.get("user")
         if user is None or not user.is_authenticated:
+            await self.send_unauthorized()
             return
         try:
             await perform_make_move(self.match_id, user, target_board, target_cell)
@@ -127,6 +174,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
     async def handle_forfeit(self):
         user = self.scope.get("user")
         if user is None or not user.is_authenticated:
+            await self.send_unauthorized()
             return
         try:
             await perform_forfeit(self.match_id, user)
@@ -157,7 +205,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def get_match(self, match_id: int) -> Match | None:
-        return Match.objects.filter(
+        return Match.objects.select_related("player_x", "player_o").filter(
             pk=match_id,
             status__in=[
                 Match.GameStatus.IN_PROGRESS,

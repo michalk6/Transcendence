@@ -62,9 +62,15 @@ Sent by the server after connecting to an available match.
     "next_board": null,
     "winner": null
   },
+  "players": {
+    "X": {"id": 536, "username": "anna"},
+    "O": null
+  },
   "turn_deadline": null
 }
 ```
+
+`players` tells who plays which sign. `O` is `null` until the second player joins. `X` is always the creator of the match.
 
 `board_state` fields:
 
@@ -85,6 +91,8 @@ Board and cell indices start at `0` and end at `8`.
 
 Only a logged-in user can join. The match must be waiting for a second player. The creator cannot join their own match as the second player.
 
+A user can have only one open match (`waiting` or `in_progress`) at a time. The same limit applies to creating a match.
+
 Send:
 
 ```json
@@ -98,9 +106,18 @@ When joining succeeds, everyone connected to the match receives:
 ```json
 {
   "type": "player_joined",
-  "user_id": 536
+  "user_id": 536,
+  "username": "ola",
+  "players": {
+    "X": {"id": 12, "username": "anna"},
+    "O": {"id": 536, "username": "ola"}
+  },
+  "current_player": "O",
+  "turn_deadline": 1793296800.0
 }
 ```
+
+The server flips a coin when the second player joins, so `current_player` (the player who starts) can be `X` or `O`. The starting player has 60 seconds for the first move (`turn_deadline`).
 
 The lobby also receives `matches_updated`.
 
@@ -110,6 +127,37 @@ If joining is not possible, the sender receives:
 {
   "type": "error",
   "detail": "Cannot join this match."
+}
+```
+
+If the user already has another open match:
+
+```json
+{
+  "type": "error",
+  "code": "open_match_limit",
+  "detail": "You already have an open match."
+}
+```
+
+### Coming back to a match
+
+A player can leave the match (close the page, lose connection) and come back. The match stays `in_progress`, so the player connects to the game WebSocket again and receives `game_state`.
+
+To find the match, use the REST API (login required):
+
+```text
+GET /api/games/tic_tac_toe_ultimate/matches/?mine=true
+```
+
+It returns `waiting` and `in_progress` matches of the logged user. The id of the match is the `<match_id>` of the WebSocket URL.
+
+If a player who is already in the match sends `join`, there is no error. The sender receives:
+
+```json
+{
+  "type": "already_in_match",
+  "sign": "X"
 }
 ```
 
@@ -191,7 +239,7 @@ If the server cannot acquire the move lock, it sends:
 
 Each player has 60 seconds to make a move after the previous player moves.
 
-The first move by X has no time limit. The timer starts after the first successful move.
+The timer starts when the second player joins. The player chosen by the coin flip has 60 seconds for the first move, so a match cannot hang when someone leaves.
 
 After each successful move, the server sends a new `turn_deadline` in `move_result`. The deadline is also included in `game_state` when someone connects.
 
@@ -262,6 +310,18 @@ Invalid JSON structure (for example, a JSON array instead of an object):
 }
 ```
 
+Missing or expired access token (the user is anonymous). Sent when an anonymous user tries `join`, `make_move` or `forfeit`:
+
+```json
+{
+  "type": "error",
+  "code": "unauthorized",
+  "detail": "Access token is missing or expired."
+}
+```
+
+The frontend should refresh the token with the REST API (`/api/auth/refresh/`) and open the game WebSocket again. The user is read from the cookie only when the connection is opened, so a connection that already works is not affected when the token expires later.
+
 Some invalid or unauthorized actions are ignored without an error response. For example, `make_move` with non-integer indices is ignored, and anonymous users cannot join, move, or forfeit.
 
 If game state is missing during a move, the match is marked as `aborted` and the sender receives an error.
@@ -296,6 +356,26 @@ This GET endpoint is public. Creating a match with POST requires login.
 | `aborted` | Active match lost its game state. |
 
 The board and turn deadline are stored in Redis while the match is active. After a win, draw, forfeit, or timeout, the result is saved in the database and the board and deadline are deleted from Redis. Finished and aborted matches cannot be opened again through the game WebSocket.
+
+## Match list and ranking
+
+```text
+GET /api/games/tic_tac_toe_ultimate/matches/
+```
+
+Public. Returns `waiting` matches. Every match has `player_x_username` (the creator) and `player_o_username`, so the lobby can show who the opponent is.
+
+```text
+GET /api/games/tic_tac_toe_ultimate/ranking/
+```
+
+Public. Returns users with at least one won (`finished`) match, from the most wins. Fields: `id`, `username`, `wins`. Wins are counted from finished matches, so there is no separate counter to keep in sync.
+
+```text
+POST /api/games/tic_tac_toe_ultimate/matches/
+```
+
+Creates a match. Returns 400 when the user already has an open match.
 
 ## Notes
 

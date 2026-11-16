@@ -5,7 +5,9 @@ from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from apps.games.tic_tac_toe.models import Match
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 import json
+import random
 import time
 import asyncio as asyncio_lib
 
@@ -14,6 +16,7 @@ User = get_user_model()
 
 GAME_LOBBY_GROUP = "tic_tac_toe_lobby"
 TURN_TIME_LIMIT = 60
+MAX_OPEN_MATCHES = 1
 
 redis_client = Redis.from_url(settings.REDIS_URL)
 async_redis_client = asyncio_redis.from_url(settings.REDIS_URL)
@@ -250,6 +253,71 @@ def set_game_result(game_result, match_id) -> None:
 
     match.status = Match.GameStatus.FINISHED
     match.save()
+
+
+def user_to_dict(user: User | None) -> dict | None:
+    if user is None:
+        return None
+    return {"id": user.pk, "username": user.username}
+
+
+# match must be loaded with select_related("player_x", "player_o"), so no query is made here
+def players_to_dict(match: Match) -> dict:
+    return {
+        "X": user_to_dict(match.player_x),
+        "O": user_to_dict(match.player_o),
+    }
+
+
+@database_sync_to_async
+def get_players(match_id: int) -> dict:
+    match = Match.objects.select_related("player_x", "player_o").get(pk=match_id)
+    return players_to_dict(match)
+
+
+def has_open_match(user: User) -> bool:
+    open_matches = Match.objects.filter(
+        Q(player_x=user) | Q(player_o=user),
+        status__in=[Match.GameStatus.WAITING, Match.GameStatus.IN_PROGRESS],
+    )
+    return open_matches.count() >= MAX_OPEN_MATCHES
+
+
+@database_sync_to_async
+def check_open_match(user: User) -> bool:
+    return has_open_match(user)
+
+
+# unlike get_sign it works for a waiting match too, so the creator can be recognized
+@database_sync_to_async
+def find_player_sign(user: User, match_id: int) -> str | None:
+    match = Match.objects.get(pk=match_id)
+    if user.pk == match.player_x_id:  # type: ignore
+        return "X"
+    if user.pk == match.player_o_id:  # type: ignore
+        return "O"
+    return None
+
+
+async def perform_join(match_id: int, user: User) -> tuple[Game, float] | None:
+    lock = async_redis_client.lock(
+        match_lock_key(match_id),
+        timeout=10,
+        blocking_timeout=5,
+    )
+
+    async with lock:
+        if not await join_match(match_id, user):
+            return None
+
+        # coin flip, X is always the creator but any of the players can start
+        game = await read_match_state(match_id)
+        game.current_player = random.choice(["X", "O"])
+        await save_match_state(match_id, game)
+
+        deadline = await set_turn_deadline(match_id)
+        asyncio_lib.create_task(start_deadline_countdown(match_id, deadline))
+        return game, deadline
 
 
 @database_sync_to_async
