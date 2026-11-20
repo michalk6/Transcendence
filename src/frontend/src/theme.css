@@ -1,0 +1,29 @@
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.accent-neon {
+  color: #00f2fe;
+}
+
+.brand-logo {
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #00f2fe;
+  font-size: 1.5rem;
+}
+
+.btn-register,
+.btn-register:focus {
+  background: linear-gradient(135deg, #7745aa, #ff007f);
+  border: none;
+  color: #fff;
+}
+
+.btn-register:hover {
+  color: #fff;
+  opacity: 0.92;
+}
+
