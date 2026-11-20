@@ -260,6 +260,8 @@ The server checks the deadline when a player tries to move, even if the timeout 
 
 A logged-in player can give up an `in_progress` match. The other player wins.
 
+The creator can also send `forfeit` in a `waiting` match (nobody joined yet). The match is cancelled: its status becomes `aborted`, there is no winner, and the creator can create or join another match.
+
 Send:
 
 ```json

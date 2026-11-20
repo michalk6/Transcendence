@@ -213,6 +213,12 @@ async def perform_forfeit(match_id: int, user: User) -> None:
 def set_forfeit_result(match_id: int, user: User) -> bool:
     match = Match.objects.get(pk=match_id)
 
+    # creator can cancel a match nobody has joined yet, there is no winner
+    if match.status == Match.GameStatus.WAITING and user.pk == match.player_x_id:  # type: ignore
+        match.status = Match.GameStatus.ABORTED
+        match.save()
+        return True
+
     if match.status != Match.GameStatus.IN_PROGRESS:
         return False
 
