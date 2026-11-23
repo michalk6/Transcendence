@@ -227,6 +227,9 @@ __marimo__/
 schema.yml
 pyproject.toml
 
+# local notes and course materials
+*.subject.pdf
+
 # django collectstatic output
 src/backend/staticfiles/
 
