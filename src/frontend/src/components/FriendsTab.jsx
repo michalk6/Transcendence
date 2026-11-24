@@ -9,15 +9,17 @@ import { getCsrfToken } from '../csrf'
 import { apiFetch } from '../api'
 import BlocklistTab from './BlocklistTab'
 import SearchBox from './SearchBox'
+import UserProfile from './UserProfile'
 
 const RESULTS_PAGE_SIZE = 10
 const FRIENDS_PAGE_SIZE = 10
 
-export default function FriendsTab({ username, onChanged, onMessage, reloadKey }) {
+export default function FriendsTab({ username, onChanged, onMessage, reloadKey, onlineUserIds }) {
   const [showBlocked, setShowBlocked] = useState(false)
   const [removeTarget, setRemoveTarget] = useState(null)
   const [alsoBlock, setAlsoBlock] = useState(false)
   const [blockTarget, setBlockTarget] = useState(null)
+  const [profileUsername, setProfileUsername] = useState(null)
   const [friends, setFriends] = useState([])
   const [friendsTerm, setFriendsTerm] = useState('')
   const [friendsPage, setFriendsPage] = useState(1)
@@ -46,6 +48,14 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
       (value) => Array.isArray(value) && value.length > 0
     )
     return firstArray ? firstArray[0] : fallback
+  }
+
+  function renderOnlineStatusIcon(userId) {
+    let iconClass = 'bi bi-circle-fill text-secondary'
+    if (onlineUserIds && onlineUserIds.has(userId)) {
+      iconClass = 'bi bi-circle-fill text-success'
+    }
+    return <i className={iconClass} style={{ fontSize: '0.5rem' }}></i>
   }
 
   async function fetchFriendsPage(pageNumber) {
@@ -467,7 +477,13 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
                 key={user.id}
                 className="d-flex justify-content-between align-items-center"
               >
-                <span>{user.username}</span>
+                <Button
+                  variant="link"
+                  className="p-0 text-decoration-none"
+                  onClick={() => setProfileUsername(user.username)}
+                >
+                  {user.username}
+                </Button>
                 {renderResultActions(user)}
               </ListGroup.Item>
             ))}
@@ -486,7 +502,13 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
                 key={request.id}
                 className="d-flex justify-content-between align-items-center"
               >
-                <span>{request.sender.username}</span>
+                <Button
+                  variant="link"
+                  className="p-0 text-decoration-none"
+                  onClick={() => setProfileUsername(request.sender.username)}
+                >
+                  {request.sender.username}
+                </Button>
                 <span className="d-flex gap-2">
                   <Button
                     size="sm"
@@ -531,7 +553,16 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
             key={friend.id}
             className="d-flex justify-content-between align-items-center"
           >
-            <span>{friend.username}</span>
+            <span className="d-flex align-items-center gap-2">
+              {renderOnlineStatusIcon(friend.id)}
+              <Button
+                variant="link"
+                className="p-0 text-decoration-none"
+                onClick={() => setProfileUsername(friend.username)}
+              >
+                {friend.username}
+              </Button>
+            </span>
             <span className="d-flex gap-2">
               <Button
                 size="sm"
@@ -580,6 +611,12 @@ export default function FriendsTab({ username, onChanged, onMessage, reloadKey }
         confirmLabel="Block"
         onConfirm={handleConfirmBlock}
         onCancel={() => setBlockTarget(null)}
+      />
+
+      <UserProfile
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
+        onlineUserIds={onlineUserIds}
       />
     </>
   )
