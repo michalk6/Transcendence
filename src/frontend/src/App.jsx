@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import Game from './pages/Game'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
 import NotFound from './pages/NotFound'
 import { getCsrfToken } from './csrf'
 import { apiFetch } from './api'
@@ -83,6 +85,14 @@ export function App() {
             <Navigate to="/login" replace />
           )
         }
+      />
+      <Route
+        path="/privacy"
+        element={<PrivacyPolicy onNavigate={navigate} user={user} />}
+      />
+      <Route
+        path="/terms"
+        element={<TermsOfService onNavigate={navigate} user={user} />}
       />
       <Route path="*" element={<NotFound onNavigate={navigate} user={user} />} />
     </Routes>

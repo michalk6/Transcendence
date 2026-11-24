@@ -27,3 +27,6 @@
   opacity: 0.92;
 }
 
+.legal-text p {
+  text-align: justify;
+}
