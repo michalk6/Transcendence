@@ -9,13 +9,20 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import NotFound from './pages/NotFound'
 import { getCsrfToken } from './csrf'
-import { apiFetch } from './api'
+import { apiFetch, setOnAuthExpired } from './api'
 
 export function App() {
   const routerNavigate = useNavigate()
 
   const [user, setUser] = useState(null)
   const [checkingSession, setCheckingSession] = useState(true)
+
+  useEffect(() => {
+    setOnAuthExpired(() => {
+      setUser(null)
+      routerNavigate('/login')
+    })
+  }, [routerNavigate])
 
   useEffect(() => {
     async function checkSession() {

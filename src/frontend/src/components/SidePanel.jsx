@@ -115,7 +115,9 @@ export default function SidePanel({ show, onHide, user, onLogout, onUserUpdated 
   return (
     <Offcanvas show={show} onHide={onHide} placement="end" className="bg-body-tertiary">
       <Offcanvas.Header closeButton closeVariant="white">
-        <Offcanvas.Title>{user ? user.username : 'Menu'}</Offcanvas.Title>
+        <Offcanvas.Title>
+          {user ? <span className="username-truncate">{user.username}</span> : 'Menu'}
+        </Offcanvas.Title>
       </Offcanvas.Header>
 
       <Offcanvas.Body>
