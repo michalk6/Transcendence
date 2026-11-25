@@ -48,13 +48,17 @@ export default function GroupRoomList({ username, onOpenRoom }) {
   }
 
   async function fetchRooms() {
-    const response = await apiFetch('/api/chat/chat-rooms/')
+    const params = new URLSearchParams({
+      room_type: 'GROUP',
+      page_size: 100,
+    })
+    const response = await apiFetch('/api/chat/chat-rooms/?' + params)
     if (!response.ok) {
       setError('Could not load chat rooms.')
       return
     }
     const data = await response.json()
-    setRooms(data.results.filter((room) => room.room_type === 'GROUP'))
+    setRooms(data.results)
     setRoomsLoaded(true)
   }
 
