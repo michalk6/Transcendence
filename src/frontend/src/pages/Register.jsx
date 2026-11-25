@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import Alert from 'react-bootstrap/Alert'
+import { Link } from 'react-router-dom'
 import AuthCard from '../components/AuthCard'
 
 export default function Register({ onNavigate, onAuthed }) {
@@ -9,6 +10,7 @@ export default function Register({ onNavigate, onAuthed }) {
   const emailRef = useRef(null)
   const passwordRef = useRef(null)
   const repeatPasswordRef = useRef(null)
+  const agreeRef = useRef(null)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -25,6 +27,11 @@ export default function Register({ onNavigate, onAuthed }) {
 
     if (password !== repeatPassword) {
       setErrors({ repeat_password: 'Passwords do not match.' })
+      return
+    }
+
+    if (!agreeRef.current.checked) {
+      setErrors({ agree: 'You must agree to the Terms of Service and Privacy Policy.' })
       return
     }
 
@@ -83,7 +90,7 @@ export default function Register({ onNavigate, onAuthed }) {
             ref={usernameRef}
             type="text"
             name="username"
-            isInvalid={!!errors.username}
+            isInvalid={Boolean(errors.username)}
             autoComplete="username"
           />
           <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>
@@ -123,6 +130,25 @@ export default function Register({ onNavigate, onAuthed }) {
             autoComplete="new-password"
           />
           <Form.Control.Feedback type="invalid">{errors.repeat_password}</Form.Control.Feedback>
+        </Form.Group>
+
+        <Form.Group className="mb-4" controlId="register-agree">
+          <Form.Check
+            ref={agreeRef}
+            type="checkbox"
+            isInvalid={!!errors.agree}
+            label={
+              <>
+                I have read and agree to the{' '}
+                <Link to="/terms" className="accent-neon">Terms of Service</Link>
+                {' '}and{' '}
+                <Link to="/privacy" className="accent-neon">Privacy Policy</Link>.
+              </>
+            }
+          />
+          {errors.agree && (
+            <div className="text-danger small mt-1">{errors.agree}</div>
+          )}
         </Form.Group>
 
         <Button type="submit" className="btn-register w-100" disabled={submitting}>
